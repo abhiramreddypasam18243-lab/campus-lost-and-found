@@ -68,4 +68,32 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   2. *How does the Lowest Common Ancestor (LCA) algorithm determine the similarity score between two locations on campus, and how are adjacent buildings handled?*
   3. *Why must missing signals return `null` (None in Python) rather than `0.0` when computing similarity scores in a multimodal retrieval system?*
 
+---
+
+## Step 4: Item Reports, Lifecycle Tables, PII Scanner, and Photo Pipeline
+* **Acceptance Criteria:** AC-21 to AC-37
+* **What was built:**
+  * Core lost and found report models (`item_reports`) and photo metadata (`item_images`) with PostgreSQL ENUMs (`report_type`, `report_status`, `time_precision`, `image_role`).
+  * Strict schema validation (`extra="forbid"`) enforcing required title, description, category, and date constraints.
+  * Maximum 3 verification questions/prompts on found items to prevent student friction while verifying rightful owners.
+  * Initial lifecycle state separation: lost reports start in `open`, found reports in `pending_review` until approved.
+  * Pure domain Asia/Kolkata time window computation (`day`, `morning` 06:00-12:00, `afternoon` 12:00-17:00, `evening` 17:00-21:00, `night` 21:00-06:00 crossing midnight, and `exact` +/- 2 hours) returning UTC timestamp ranges.
+  * Exhaustive finite state machine `validate_status_transition` enforcing legitimate state transitions: found (`pending_review` -> `open`/`removed`, `open` -> `in_claim`/`returned`/`archived`/`removed`, `in_claim` -> `open`/`returned`, `returned` = terminal irreversible), lost (`open` -> `matched`/`closed`, `matched` -> `open`/`closed`, `closed` -> `open`).
+  * User closure endpoint allowing reporters to close their own reports; returns HTTP 404 anti-enumeration for non-owners.
+  * Server-side PII Scanner (`backend/app/domain/pii.py`) detecting credit cards via Luhn checksum, 13-19 digit number runs, international & domestic phone numbers, and email addresses in public fields. On detection, rejects with HTTP 422 `pii_detected` without echoing back the sensitive input. Allows PII only in private details fields.
+  * Photo processing pipeline (`backend/app/services/photo.py`): content-type magic bytes verification (ignoring spoofed extensions), 5MB file size limit, 6000x6000 px dimension guard against decompression/pixel bombs, EXIF metadata stripping (including GPS and camera identifiers) using Pillow, image downscaling to <= 1600 px long edge, 256 px thumbnail generation, random UUID storage keys, and 64-bit difference hashing (dHash) for duplicate detection.
+  * Sensitive category protection (`id_card`, `wallet`): photos are automatically marked private and protected from unauthorized public viewing (HTTP 404).
+* **Why it is designed that way:**
+  * Decompression bombs (e.g., a heavily compressed 10000x10000 image taking only 100KB on disk but over 300MB uncompressed in RAM) can quickly exhaust worker memory; inspecting image dimensions before reading full pixel buffers prevents denial-of-service.
+  * EXIF metadata frequently retains exact home/work GPS coordinates and phone camera identifiers; stripping EXIF server-side prevents accidental location disclosure.
+  * When PII is detected in public fields, the API response must NEVER echo the offending number or value back in the error payload, preventing data exfiltration or reflection attacks.
+  * Enforcing explicit `Asia/Kolkata` timezone calculations avoids UTC date truncation bugs where an item lost at 11:00 PM IST is categorized on the wrong UTC calendar day.
+* **One thing that could go wrong:**
+  * If photo files are saved using user-supplied filenames, path traversal attacks (`../../etc/passwd`) or file overwrite vulnerabilities can compromise the host; utilizing UUIDv4 keys and serving images strictly through authenticated streaming endpoints completely decouples user filenames from storage.
+* **Quiz Questions (for viva preparation):**
+  1. *What is a pixel/decompression bomb, and how does the image ingestion pipeline protect server memory before resizing images?*
+  2. *How does the PII scanner detect credit card numbers accurately using the Luhn algorithm, and why must the error response NEVER echo back the detected value?*
+  3. *Why is `returned` modeled as a strictly irreversible terminal state in the found-item lifecycle finite state machine?*
+
+
 

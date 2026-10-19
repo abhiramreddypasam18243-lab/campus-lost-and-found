@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change_this_to_a_secure_random_key_in_production_32chars"
     API_PORT: int = 8000
     FRONTEND_PORT: int = 8080
+    UPLOAD_DIR: str = "uploads"
 
     # Campus Domain Whitelist (parsed from comma-separated string)
     ALLOWED_EMAIL_DOMAINS_RAW: str = Field(

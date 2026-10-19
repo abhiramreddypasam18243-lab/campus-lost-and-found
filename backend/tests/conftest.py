@@ -36,10 +36,11 @@ async def clean_database_and_state() -> AsyncGenerator[None, None]:
         try:
             await session.execute(
                 text(
-                    "TRUNCATE TABLE users, email_tokens, sessions, audit_log, location_adjacency, campus_locations RESTART IDENTITY CASCADE;"
+                    "TRUNCATE TABLE users, email_tokens, sessions, audit_log, location_adjacency, campus_locations, item_images, item_reports RESTART IDENTITY CASCADE;"
                 )
             )
             await session.commit()
+
         except Exception:
             await session.rollback()
 

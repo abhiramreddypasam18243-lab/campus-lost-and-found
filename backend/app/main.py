@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.api import auth, health, locations
+from app.api import auth, health, images, locations, reports
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -80,3 +80,5 @@ app.add_middleware(MaxBodySizeMiddleware)
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(locations.router)
+app.include_router(reports.router)
+app.include_router(images.router)

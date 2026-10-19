@@ -266,18 +266,23 @@ async def get_me(user: User = Depends(require_authenticated_user)) -> UserRespon
 @router.get("/me/export")
 async def export_my_data(
     user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
     """AC-104: Export user's personal data as JSON."""
-    return {
-        "user": {
-            "id": str(user.id),
-            "email": user.email,
-            "display_name": user.display_name,
-            "role": user.role,
-            "timezone": user.timezone,
-            "created_at": user.created_at.isoformat(),
-        },
-        "reports": [],
-        "claims": [],
-        "notifications": [],
-    }
+    from app.services.user_account import export_user_data
+
+    return await export_user_data(db, user)
+
+
+@router.delete("/me", dependencies=[Depends(verify_csrf)])
+async def delete_me(
+    response: Response,
+    user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """AC-103: Delete user account, scrub personal data, anonymise reports, and clear cookie."""
+    from app.services.user_account import delete_user_account
+
+    await delete_user_account(db, user)
+    response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
+    return {"status": "deleted", "message": "Account deleted and data anonymized."}

@@ -310,6 +310,15 @@ async def verify_and_complete_handover(
         handover.attempts += 1
         if handover.attempts >= handover.max_attempts:
             handover.status = "locked"
+            await write_audit_log(
+                db=db,
+                actor_id=moderator.id,
+                role=moderator.role,
+                action="handover.locked",
+                entity_type="handover",
+                entity_id=handover.id,
+                summary={"claim_id": str(claim_id)},
+            )
         await db.commit()
         attempts_left = max(0, handover.max_attempts - handover.attempts)
         raise HTTPException(

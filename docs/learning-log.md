@@ -263,3 +263,27 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   2. *How does the system ensure that a student typing a handwritten or mistyped code (e.g., using letter 'O' instead of digit '0') is not penalized with a failed attempt?*
   3. *What specific state transitions occur across claims, lost reports, and found reports within the atomic completion transaction when a handover is verified?*
 
+### Step 10: Retention, Deletion, Export, and Audit (AC-97 to AC-104)
+* **What was built:**
+  * **Database Immutability Trigger (`0011_audit_log_immutability.py`):** PostgreSQL function `audit_log_immutable_trigger()` and trigger `trg_audit_log_immutable` on `audit_log`. Rejects any raw `UPDATE` or `DELETE` attempt with an exception. Only privileged retention tasks setting `SET LOCAL app.allow_retention_purge = 'true'` can purge rows older than the retention cutoff (AC-97, AC-102).
+  * **Retention Service (`app/services/retention.py`):**
+    * Expiring found reports still `open` after 90 days to `unclaimed_expired` (AC-100).
+    * Disposition recording (`donated`, `disposed`, `kept`) on `unclaimed_expired` items via `POST /api/mod/reports/{id}/disposition` (AC-100).
+    * Photo & Evidence Purging (AC-101): deletes storage files from disk, marks `deleted_at = now` on `item_images`, removes corresponding `image_embeddings`, and scrubs claim evidence older than 30 days.
+    * Privileged audit log purge for rows older than 365 days (AC-102).
+  * **User Account Service (`app/services/user_account.py`, `app/api/auth.py`, `app/api/admin.py`):**
+    * Role management (AC-99): `PATCH /api/admin/users/{id}/role` changes roles, logs `role.changed`, and strictly prevents demotion or deletion of the last remaining admin (HTTP 409).
+    * Data export (AC-104): `GET /api/me/export` delivers the user's own profile, reports, claims, evidence, and notifications as JSON with zero data leaks from other users.
+    * Account deletion (AC-103): `DELETE /api/me` closes open reports, scrubs private details and claim evidence, revokes all active sessions (immediate 401 per AC-05), wipes email to `deleted_{uuid}@anonymized.local`, sets display name to "Deleted User", and ensures a raw database dump contains zero occurrences of the deleted email.
+* **Why it is designed that way:**
+  * **Database-Level Immutability over Application Checks:** Application bugs or rogue ORM scripts could accidentally overwrite audit rows. Enforcing immutability via a PostgreSQL database trigger guarantees that audit history cannot be tampered with even if application code is modified.
+  * **Single-Admin Demotion Guard:** If an organization's sole administrator accidentally demoted themselves or deleted their account, the entire system would lose administrative governance. The count check guarantees at least one active admin persists at all times.
+  * **GDPR Right-to-Erasure with Forensic Audit Integrity:** When a user requests account deletion, all personally identifiable information (PII) including email, name, private descriptions, and evidence photos are irreversibly scrubbed so forensic dumps contain no traces. However, the integrity of inventory logs and moderation records is preserved under pseudonymous IDs.
+* **One thing that could go wrong:**
+  * **Dangling Storage Files:** If database records for images were deleted without deleting the corresponding binary files on disk, storage volume exhaustion would occur over time. The retention pipeline removes disk files first before updating database timestamps and deleting embeddings.
+* **Quiz Questions (for viva preparation):**
+  1. *How does the database trigger enforce audit log immutability while still permitting authorized retention purges after 365 days?*
+  2. *Why must open reports be closed and private details stripped when a user deletes their account, rather than cascading a hard delete of the report?*
+  3. *What prevents a campus lost-and-found system from being left without an administrator when roles are changed via the admin API?*
+
+

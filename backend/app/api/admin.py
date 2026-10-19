@@ -199,3 +199,103 @@ async def activate_model(
         is_active=reg.is_active,
         created_at=reg.created_at,
     )
+
+
+class AdminUserResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: uuid.UUID
+    email: str
+    display_name: str | None
+    role: str
+    status: str
+    created_at: datetime
+
+
+class UpdateUserRoleRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: str
+
+
+class RetentionRunResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expired_reports: int
+    purged_images: int
+    purged_audit_logs: int
+
+
+@router.get("/users", response_model=list[AdminUserResponse])
+async def list_admin_users(
+    current_admin: User = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[AdminUserResponse]:
+    """AC-99: Admin view of users."""
+    stmt = select(User).order_by(User.created_at.desc())
+    users = list((await db.execute(stmt)).scalars().all())
+    return [
+        AdminUserResponse(
+            id=u.id,
+            email=u.email,
+            display_name=u.display_name,
+            role=u.role,
+            status=u.status,
+            created_at=u.created_at,
+        )
+        for u in users
+    ]
+
+
+@router.patch(
+    "/users/{user_id}/role",
+    response_model=AdminUserResponse,
+    dependencies=[Depends(verify_csrf)],
+)
+async def update_user_role(
+    user_id: uuid.UUID,
+    payload: UpdateUserRoleRequest,
+    current_admin: User = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db),
+) -> AdminUserResponse:
+    """AC-99: Change user role with last-admin guard and audit logging."""
+    from app.services.user_account import change_user_role
+
+    target = await change_user_role(db, user_id, payload.role, current_admin)
+    return AdminUserResponse(
+        id=target.id,
+        email=target.email,
+        display_name=target.display_name,
+        role=target.role,
+        status=target.status,
+        created_at=target.created_at,
+    )
+
+
+@router.post(
+    "/retention/run",
+    response_model=RetentionRunResponse,
+    dependencies=[Depends(verify_csrf)],
+)
+async def trigger_retention_sweep(
+    retention_days: int = 90,
+    image_purge_days: int = 30,
+    audit_retention_days: int = 365,
+    current_admin: User = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db),
+) -> RetentionRunResponse:
+    """AC-100, AC-101, AC-102: Execute retention sweep job."""
+    from app.services.retention import (
+        expire_unclaimed_reports,
+        purge_closed_images,
+        purge_old_audit_logs,
+    )
+
+    expired_reports = await expire_unclaimed_reports(db, retention_days=retention_days)
+    purged_images = await purge_closed_images(db, purge_days=image_purge_days)
+    purged_audit_logs = await purge_old_audit_logs(db, retention_days=audit_retention_days)
+    return RetentionRunResponse(
+        expired_reports=expired_reports,
+        purged_images=purged_images,
+        purged_audit_logs=purged_audit_logs,
+    )

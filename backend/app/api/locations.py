@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import require_role, verify_csrf
 from app.core.database import get_db
 from app.models.location import CampusLocation, LocationAdjacency
+from app.models.user import User
 from app.schemas.location import (
     AdjacencyCreate,
     AdjacencyResponse,
@@ -15,6 +16,7 @@ from app.schemas.location import (
     LocationResponse,
     LocationUpdate,
 )
+from app.services.audit import write_audit_log
 
 router = APIRouter(prefix="/api/locations", tags=["locations"])
 
@@ -164,6 +166,7 @@ async def get_location(
 )
 async def create_location(
     payload: LocationCreate,
+    admin_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ) -> LocationResponse:
     if payload.parent_id is not None:
@@ -198,6 +201,17 @@ async def create_location(
         lng=Decimal(str(payload.lng)) if payload.lng is not None else None,
     )
     db.add(loc)
+    await db.flush()
+
+    await write_audit_log(
+        db=db,
+        actor_id=admin_user.id,
+        role=admin_user.role,
+        action="location.created",
+        entity_type="campus_location",
+        entity_id=loc.id,
+        summary={"name": loc.name, "kind": loc.kind},
+    )
     await db.commit()
     await db.refresh(loc)
 
@@ -220,6 +234,7 @@ async def create_location(
 async def update_location(
     location_id: uuid.UUID,
     payload: LocationUpdate,
+    admin_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ) -> LocationResponse:
     stmt = select(CampusLocation).where(CampusLocation.id == location_id)
@@ -277,6 +292,15 @@ async def update_location(
     if payload.lng is not None:
         loc.lng = Decimal(str(payload.lng))
 
+    await write_audit_log(
+        db=db,
+        actor_id=admin_user.id,
+        role=admin_user.role,
+        action="location.updated",
+        entity_type="campus_location",
+        entity_id=loc.id,
+        summary={"name": loc.name, "kind": loc.kind},
+    )
     await db.commit()
     await db.refresh(loc)
 
@@ -298,6 +322,7 @@ async def update_location(
 )
 async def delete_location(
     location_id: uuid.UUID,
+    admin_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     stmt = select(CampusLocation).where(CampusLocation.id == location_id)
@@ -321,5 +346,14 @@ async def delete_location(
                 detail="location_in_use_by_reports",
             )
 
+    await write_audit_log(
+        db=db,
+        actor_id=admin_user.id,
+        role=admin_user.role,
+        action="location.deleted",
+        entity_type="campus_location",
+        entity_id=loc.id,
+        summary={"name": loc.name},
+    )
     await db.delete(loc)
     await db.commit()

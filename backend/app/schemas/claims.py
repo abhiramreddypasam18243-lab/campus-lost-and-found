@@ -57,6 +57,7 @@ class ClaimResponse(BaseModel):
     submitted_at: datetime
     reviewed_at: datetime | None = None
     escalated: bool = False
+    handover_code: str | None = None
     created_at: datetime
 
 

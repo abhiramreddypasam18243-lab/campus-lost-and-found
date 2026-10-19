@@ -11,6 +11,7 @@ from app.api import (
     auth,
     claims,
     found,
+    handover,
     health,
     images,
     locations,
@@ -98,5 +99,6 @@ app.include_router(images.router)
 app.include_router(notifications.router)
 app.include_router(matches.router)
 app.include_router(claims.router)
+app.include_router(handover.router)
 app.include_router(moderation.router)
 app.include_router(admin.router)

@@ -231,3 +231,35 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   1. *Why must the finder of a found item be prevented from seeing claim evidence and prompt answers submitted by claimants?*
   2. *How does the system enforce concurrency control and prevent duplicate decisions when multiple moderators review claims simultaneously?*
   3. *What happens to a found report's status and subsequent claims if an approved claimant withdraws their claim prior to handover?*
+
+### Step 9: Handover Codes and Completion (AC-86 to AC-96)
+* **What was built:**
+  * **Pure Domain Logic (`app/domain/handover.py`):**
+    * Human-friendly Base32 alphabet `0123456789ABCDEFGHJKMNPQRSTVWXYZ` (32 characters, excluding ambiguous glyphs `I`, `L`, `O`), generating 8-character codes with $\log_2(32^8) = 40$ bits of entropy (AC-86).
+    * Normalization routine (AC-88): strips whitespace and hyphens, converts to uppercase, and maps optical confusions (`O` $\to$ `0`, `I` $\to$ `1`, `L` $\to$ `1`).
+    * Cryptographic security (AC-87, AC-95): stores strictly secret-keyed HMAC-SHA-256 digests (`code_hmac`), never plaintext; verification performs constant-time comparison via `hmac.compare_digest` over HMAC digests.
+    * Injected-clock expiration (AC-89): 48-hour valid lifetime from issuance.
+    * Rate limiting and lockout bounds (AC-91): maximum 5 failed attempts per code; 6th attempt locks the handover and returns HTTP 423 `handover_locked`.
+    * Reissue bounds (AC-92): allows up to 3 reissues per claim; each reissue resets failed attempt counter and restarts the 48-hour expiration clock.
+  * **Database Infrastructure & Migrations (`0010_handover_table.py`):**
+    * `handovers` table with foreign key to `claims.id`, `code_hmac` string(64), attempts, max_attempts, reissue_count, max_reissues, status, `issued_at`, `expires_at`, `verified_at`, `verified_by_id`, and `identity_note`.
+    * Unique constraint `uq_handovers_claim_id` ensuring 1-to-1 relationship between approved claims and handover codes.
+  * **Services & Handover Desk API Endpoints (`services/handover.py`, `api/handover.py`):**
+    * `issue_handover`: invoked automatically upon claim approval (AC-79), generating code and dispatching transactional in-app/email notification to claimant.
+    * `GET /api/mod/handovers/{claim_id}` (AC-96): desk status view showing status, attempts left, and lock state, strictly excluding plaintext code and HMAC.
+    * `POST /api/mod/handovers/{claim_id}/verify` (AC-90, AC-91, AC-93): verifies code and records identity check note ($\ge 10$ characters); duplicate verification of verified code returns HTTP 409 `code_used`.
+    * `POST /api/mod/handovers/{claim_id}/reissue` (AC-92): moderator reissue with reason ($\ge 10$ characters); blocks 4th reissue with HTTP 409 `reissue_limit_exceeded`.
+    * `POST /api/mod/handovers/expire` (AC-94): sweep operation that transitions expired handovers and approved claims to `expired` and returns reserved items to `open`.
+    * Single atomic completion transaction (AC-93): transitions claim to `completed`, found report to `returned`, linked lost report to `resolved`, bulk-rejects competing open claims on the same found item with reason `item_returned`, writes immutable audit log, and notifies claimant and finder.
+    * Privacy-preserving claimant delivery (AC-96): claimant views single-use handover code in `GET /api/claims/{id}`; moderators and third parties never receive code or HMAC.
+* **Why it is designed that way:**
+  * **Zero-Knowledge Handover Secrets:** Neither database administrators reviewing production tables nor desk staff examining claimant records can view plaintext handover codes. Because only the claimant receives the raw code, fraud by staff impersonating claimants is structurally eliminated.
+  * **Optical Normalization for Human Reliability:** Lost-and-found transactions occur in physical campus offices where students transcribe codes from mobile screens or handwriting. Normalizing `O` $\to$ `0` and `I/L` $\to$ `1` prevents accidental lockouts without compromising security.
+  * **All-or-Nothing Atomic Completion:** If marking the item returned succeeded but rejecting competing claims failed halfway, multiple students would continue waiting for review of an item already handed over. Encapsulating claim completion, inventory updates, competing claim rejections, notifications, and audit logs into a single ACID transaction guarantees system consistency.
+* **One thing that could go wrong:**
+  * **Timing Attacks on Code Verification:** Standard string comparison (`==`) exits early upon encountering the first non-matching character, allowing an attacker with precise network measurements to guess characters incrementally. Mitigated by hashing candidate input with secret-keyed HMAC-SHA-256 and comparing digests using `hmac.compare_digest`.
+* **Quiz Questions (for viva preparation):**
+  1. *Why does the handover verification system store HMAC-SHA-256 digests rather than raw handover codes or simple SHA-256 hashes?*
+  2. *How does the system ensure that a student typing a handwritten or mistyped code (e.g., using letter 'O' instead of digit '0') is not penalized with a failed attempt?*
+  3. *What specific state transitions occur across claims, lost reports, and found reports within the atomic completion transaction when a handover is verified?*
+

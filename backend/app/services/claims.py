@@ -433,6 +433,11 @@ async def decide_claim(
             payload={"found_title": found_report.title, "claim_status": "approved"},
         )
 
+        # AC-79: Approving makes item reserved and issues a handover
+        from app.services.handover import issue_handover
+
+        await issue_handover(db, claim, moderator, now)
+
     elif action == "reject":
         claim.status = new_status
         claim.decision_note = decision_note

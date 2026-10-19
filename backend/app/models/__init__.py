@@ -1,6 +1,7 @@
 from app.models.audit import AuditLog
 from app.models.claims import Claim
 from app.models.embeddings import ImageEmbedding, ModelRegistry, TextEmbedding
+from app.models.handover import Handover
 from app.models.jobs import BackgroundJob
 from app.models.location import CampusLocation, LocationAdjacency
 from app.models.matching import MatchCandidate, MatchFeedback
@@ -25,4 +26,5 @@ __all__ = [
     "MatchCandidate",
     "MatchFeedback",
     "Claim",
+    "Handover",
 ]

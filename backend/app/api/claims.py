@@ -11,6 +11,7 @@ from app.core.auth import require_authenticated_user, require_verified_user, ver
 from app.core.database import get_db
 from app.domain.claims import is_claim_escalated
 from app.models.claims import Claim
+from app.models.notifications import Notification
 from app.models.user import User
 from app.schemas.claims import ClaimCreate, ClaimEvidenceUpdate, ClaimResponse
 from app.services import claims as claim_service
@@ -18,7 +19,7 @@ from app.services import claims as claim_service
 router = APIRouter(prefix="/api/claims", tags=["claims"])
 
 
-def to_claim_response(claim: Claim) -> ClaimResponse:
+def to_claim_response(claim: Claim, handover_code: str | None = None) -> ClaimResponse:
     now = datetime.now(UTC)
     escalated = is_claim_escalated(claim.submitted_at, now, claim.status)
     return ClaimResponse(
@@ -37,6 +38,7 @@ def to_claim_response(claim: Claim) -> ClaimResponse:
         submitted_at=claim.submitted_at,
         reviewed_at=claim.reviewed_at,
         escalated=escalated,
+        handover_code=handover_code,
         created_at=claim.created_at,
     )
 
@@ -71,7 +73,25 @@ async def list_my_claims(
     )
     result = await db.execute(stmt)
     claims = result.scalars().all()
-    return [to_claim_response(c) for c in claims]
+
+    # Pre-fetch handover codes for any approved or completed claims
+    notif_stmt = (
+        select(Notification)
+        .where(
+            Notification.user_id == current_user.id,
+            Notification.event_type == "handover_ready",
+        )
+        .order_by(Notification.created_at.desc())
+    )
+    notifs = (await db.execute(notif_stmt)).scalars().all()
+    claim_code_map: dict[str, str] = {}
+    for notif in notifs:
+        cid = notif.payload.get("claim_id")
+        code = notif.payload.get("handover_code")
+        if cid and code and cid not in claim_code_map:
+            claim_code_map[cid] = code
+
+    return [to_claim_response(c, handover_code=claim_code_map.get(str(c.id))) for c in claims]
 
 
 @router.get(
@@ -83,9 +103,27 @@ async def get_claim(
     current_user: User = Depends(require_authenticated_user),
     db: AsyncSession = Depends(get_db),
 ) -> ClaimResponse:
-    """AC-77: View claim detail. Allowed only for claimant and moderators (404 otherwise)."""
+    """AC-77, AC-96: View claim detail. Allowed only for claimant and moderators (404 otherwise).
+
+    Claimant receives their single-use handover code; moderators and others never receive code or HMAC.
+    """
     claim = await claim_service.get_claim_detail(db, claim_id, current_user)
-    return to_claim_response(claim)
+    handover_code = None
+    if current_user.id == claim.claimant_id and claim.status in ("approved", "completed"):
+        stmt = (
+            select(Notification)
+            .where(
+                Notification.user_id == current_user.id,
+                Notification.event_type == "handover_ready",
+            )
+            .order_by(Notification.created_at.desc())
+        )
+        notifs = (await db.execute(stmt)).scalars().all()
+        for notif in notifs:
+            if notif.payload.get("claim_id") == str(claim.id):
+                handover_code = notif.payload.get("handover_code")
+                break
+    return to_claim_response(claim, handover_code=handover_code)
 
 
 @router.post(

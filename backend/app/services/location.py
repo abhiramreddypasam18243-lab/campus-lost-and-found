@@ -1,4 +1,5 @@
 import uuid
+from typing import Any, cast
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,3 +66,45 @@ async def resolve_buildings_batch(
         b_id, b_name = await resolve_building_for_location(db, loc_id)
         mapping[loc_id] = (b_id, b_name)
     return mapping
+
+
+async def calculate_db_location_score(
+    db: AsyncSession, loc_a_id: uuid.UUID | None, loc_b_id: uuid.UUID | None
+) -> float | None:
+    """Calculate location similarity score between two locations in the database."""
+    if loc_a_id is None or loc_b_id is None:
+        return None
+    if loc_a_id == loc_b_id:
+        return 1.0
+
+    from sqlalchemy import select
+
+    from app.domain.location import LocationNode, calculate_location_score
+    from app.models.location import CampusLocation, LocationAdjacency
+
+    locs_res = await db.execute(select(CampusLocation))
+    all_locs = {loc.id: loc for loc in locs_res.scalars().all()}
+    if loc_a_id not in all_locs or loc_b_id not in all_locs:
+        return None
+
+    adj_res = await db.execute(select(LocationAdjacency))
+    adjacency_set = {(adj.building_a, adj.building_b) for adj in adj_res.scalars().all()}
+    for a, b in list(adjacency_set):
+        adjacency_set.add((b, a))
+
+    node_map: dict[uuid.UUID, LocationNode] = {}
+
+    def get_or_create_node(lid: uuid.UUID) -> LocationNode | None:
+        if lid in node_map:
+            return node_map[lid]
+        loc = all_locs.get(lid)
+        if loc is None:
+            return None
+        parent_node = get_or_create_node(loc.parent_id) if loc.parent_id else None
+        node = LocationNode(id=loc.id, name=loc.name, kind=cast(Any, loc.kind), parent=parent_node)
+        node_map[lid] = node
+        return node
+
+    node_a = get_or_create_node(loc_a_id)
+    node_b = get_or_create_node(loc_b_id)
+    return calculate_location_score(node_a, node_b, adjacency_set)

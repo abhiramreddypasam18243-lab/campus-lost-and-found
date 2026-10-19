@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import uuid
 from datetime import UTC, datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Index, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -44,6 +46,12 @@ class TextEmbedding(Base):
         UniqueConstraint(
             "entity_id", "model_name", "model_version", name="uq_text_embeddings_entity_model"
         ),
+        Index(
+            "ix_text_embeddings_hnsw",
+            "vector",
+            postgresql_using="hnsw",
+            postgresql_ops={"vector": "vector_cosine_ops"},
+        ),
     )
 
 
@@ -61,5 +69,11 @@ class ImageEmbedding(Base):
     __table_args__ = (
         UniqueConstraint(
             "entity_id", "model_name", "model_version", name="uq_image_embeddings_entity_model"
+        ),
+        Index(
+            "ix_image_embeddings_hnsw",
+            "vector",
+            postgresql_using="hnsw",
+            postgresql_ops={"vector": "vector_cosine_ops"},
         ),
     )

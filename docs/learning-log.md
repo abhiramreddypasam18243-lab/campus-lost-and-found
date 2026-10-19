@@ -165,6 +165,41 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   2. *What is the Transactional Outbox Pattern, and how does it prevent the "dual-write" consistency hazard between relational databases and external services like email or ML workers?*
   3. *Why should background job retry intervals use exponential backoff (e.g., 1, 2, 4, 8 minutes) instead of immediate or fixed-interval retries?*
 
+## Step 7: The Matching Engine (Signals, Hybrid, Retrieval, and Explanations)
+* **Acceptance Criteria:** AC-51 to AC-67
+* **What was built:**
+  * **Pure Domain Scoring & Candidate Logic (`app/domain/matching.py`):**
+    * Text score (AC-51): $\max(0, \text{cosine})$ of normalized embeddings (tested on cosine 0.82 $\to$ 0.82, -0.10 $\to$ 0.0).
+    * Time score (AC-52): Overlapping windows score 1.0; asymmetric exponential decay if found after lost ($\exp(-\text{gap}/48)$; 12h $\to$ 0.7788, 48h $\to$ 0.3679) and if found before lost ($\exp(-\text{gap}/6)$; 6h $\to$ 0.3679, 12h $\to$ 0.1353).
+    * Hybrid score with dynamic weight renormalization (AC-53, AC-54): Sums $\frac{\sum w_i s_i}{\sum w_i}$ strictly over non-null signals, never treating missing signals as zero (signals 0.8, 0.6, 0.7, 0.5 score 0.685; with image missing, weights renormalize over 0.65 yielding 0.7308; a text-only pair scores exactly its text score).
+    * Image signal determination (AC-55): Image-to-image similarity when both have photos, text-to-image cross-similarity when exactly one has photos, and null when neither does.
+    * Candidate constraints validation (AC-56): Both reports `open`, reporters differ, pair not dismissed, found item not reserved or returned, found time between 6 hours before lost window starts and 30 days after it ends.
+    * Deterministic tie-breaking (AC-57): Sorts by `score DESC`, then `found.created_at ASC` (older found item first), then `found.id ASC`.
+    * Explainability & Exact Additivity (AC-59): Signal contributions $c_i = \frac{w_i s_i}{\sum w_j}$ sum to the combined score within $10^{-9}$; plain language explanations for signals contributing $\ge 10\%$ of score (or top 3).
+  * **Database Infrastructure & Migrations (`0007_match_candidates.py`, `0008_hnsw_indexes.py`):**
+    * Tables `match_candidates` and `match_feedback` with unique constraint `(lost_id, found_id, weights_version)` and status indexes.
+    * pgvector HNSW vector cosine indexes (`vector_cosine_ops`) created on `text_embeddings` and `image_embeddings` for approximate nearest-neighbor search.
+  * **Matching Services & API (`services/matching.py`, `api/matches.py`):**
+    * `compute_matches_for_report`: Bidirectional candidate scoring (lost triggers found, found triggers lost), idempotent upsert, and transactional match suggestion notification creation for top 3 candidates scoring $\ge 0.65$ (AC-63, AC-65).
+    * `GET /api/reports/{id}/matches` (AC-58): Owner-only matching endpoint (404 anti-enumeration for foreign users) returning score, bin, signals, explanations, and strictly whitelisted public found item summaries (`PublicFoundItemSummary`).
+    * Privacy Canary Contract (AC-60): Canary string in private details never appears in explanations, responses, notifications, or logs.
+    * Permanent Dismissal (AC-61): `POST /api/matches/{id}/dismiss` marks candidate as dismissed, records feedback, and prevents dismissed pairs from reappearing.
+    * AI Advisory Enforcement (AC-62): Verified that artificial score updates (e.g. 0.99) never alter report or claim status.
+    * Model & Weights Versioning (AC-64): Stores `weights_version` and `model_versions`; changing weights preserves historical runs.
+    * HNSW Recall & Latency Verification (AC-66, AC-67): Verified HNSW recall@10 $\ge 90\%$ against exact flat search and retrieval/scoring latency $< 200$ ms at p50 and $< 800$ ms at p95.
+* **Why it is designed that way:**
+  * **Dynamic Weight Renormalization:** Treating missing signals (such as an absent photo) as zero would severely penalize honest reporters who lost an item for which they had no picture. Renormalizing remaining weights preserves fairness across varying signal availability.
+  * **Asymmetric Time Decay:** While an item cannot physically be found before it was lost (except for slight human reporting errors in timestamps, allowing a steep 6-hour half-decay), lost items commonly sit undetected in campus hallways or lost-and-found bins for days or weeks (represented by a gradual 48-hour decay).
+  * **Layering & Separation of Concerns:** Domain matching calculations contain zero database or framework imports, allowing the exact formulas and worked numbers from the specification to be tested with high-speed, deterministic unit tests.
+  * **AI as Advisory Only:** Under campus policy and ethical guidelines, automated similarity scores serve exclusively to surface candidate suggestions to human owners and staff, never triggering automated lifecycle or claim decisions.
+* **One thing that could go wrong:**
+  * **HNSW Index Autogenerate Drift:** Creating pgvector HNSW indexes in raw SQL without declaring them in SQLAlchemy model `__table_args__` causes `alembic check` to flag unmanaged indexes as dropped. Explicitly declaring `Index("ix_text_embeddings_hnsw", "vector", postgresql_using="hnsw", postgresql_ops={"vector": "vector_cosine_ops"})` in the model metadata keeps database state and Python schema in lockstep.
+* **Quiz Questions (for viva preparation):**
+  1. *Why must missing multimodal signals be dynamically excluded and weights renormalized rather than imputed as 0.0 in lost-and-found matching?*
+  2. *What is the mathematical justification for an asymmetric exponential decay function in the time similarity score?*
+  3. *How does the explanation generator guarantee that the sum of individual signal contributions strictly equals the combined hybrid score?*
+
+
 
 
 

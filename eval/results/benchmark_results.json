@@ -1,0 +1,310 @@
+{
+  "timestamp": "2026-10-19T19:13:24.412914+00:00",
+  "seed": 42,
+  "dataset_hash": "2d8bb4d3e49586131ba2cbbc03e6c947af6d631bc953751fd8820f87a7c84565",
+  "config_hash": "593848fdab7e97bda877c07a464b96ab8bce478f40cbebc0edfe7010b3e62185",
+  "git_commit": "unknown",
+  "hardware": {
+    "machine": "x86_64",
+    "processor": "x86_64",
+    "system": "Linux",
+    "python_version": "3.12.15"
+  },
+  "models": {
+    "text_embedding": "all-MiniLM-L6-v2",
+    "image_embedding": "clip-ViT-B-32",
+    "weights_version": "v1.0-grid-tuned"
+  },
+  "weights": {
+    "w_text": 0.7,
+    "w_photo": 0.2,
+    "w_location": 0.05,
+    "w_time": 0.05
+  },
+  "systems": {
+    "System A (BM25)": {
+      "metrics": {
+        "recall_at_1": 0.0095,
+        "recall_at_3": 0.0238,
+        "recall_at_5": 0.0381,
+        "recall_at_10": 0.081,
+        "mrr": 0.0418,
+        "ndcg_at_10": 0.037,
+        "precision_at_5": 0.0076
+      },
+      "mrr_95_ci": [
+        0.028,
+        0.0586
+      ],
+      "ranks_evaluated": 210
+    },
+    "System B (Text Embeddings)": {
+      "metrics": {
+        "recall_at_1": 0.081,
+        "recall_at_3": 0.2333,
+        "recall_at_5": 0.3286,
+        "recall_at_10": 0.6048,
+        "mrr": 0.2315,
+        "ndcg_at_10": 0.296,
+        "precision_at_5": 0.0657
+      },
+      "mrr_95_ci": [
+        0.2006,
+        0.2679
+      ],
+      "ranks_evaluated": 210
+    },
+    "System C (Image Similarity)": {
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "recall_at_10": 1.0,
+        "mrr": 1.0,
+        "ndcg_at_10": 1.0,
+        "precision_at_5": 0.2
+      },
+      "mrr_95_ci": [
+        1.0,
+        1.0
+      ],
+      "ranks_evaluated": 58
+    },
+    "System D (Hand-Weighted Hybrid)": {
+      "metrics": {
+        "recall_at_1": 0.8238,
+        "recall_at_3": 0.8762,
+        "recall_at_5": 0.8857,
+        "recall_at_10": 0.8905,
+        "mrr": 0.8546,
+        "ndcg_at_10": 0.862,
+        "precision_at_5": 0.1771
+      },
+      "mrr_95_ci": [
+        0.8094,
+        0.9
+      ],
+      "ranks_evaluated": 210
+    },
+    "System E (Learned Fusion)": {
+      "metrics": {
+        "recall_at_1": 0.9238,
+        "recall_at_3": 0.9762,
+        "recall_at_5": 0.981,
+        "recall_at_10": 0.9905,
+        "mrr": 0.9522,
+        "ndcg_at_10": 0.961,
+        "precision_at_5": 0.1962
+      },
+      "mrr_95_ci": [
+        0.9294,
+        0.9747
+      ],
+      "ranks_evaluated": 210
+    }
+  },
+  "hypothesis_h1": {
+    "statement": "H1: The hybrid system has a higher MRR than the best single-signal baseline.",
+    "best_baseline": "System B (Text Embeddings)",
+    "hybrid_system": "System D (Hand-Weighted Hybrid)",
+    "mean_mrr_difference": 0.6236,
+    "difference_95_ci": [
+      0.5747,
+      0.6731
+    ],
+    "is_supported": true,
+    "confidence_excludes_zero": true,
+    "limits": "Synthetic text, location, and time rules share generation assumptions with scoring functions; results reflect synthetic campus simulation rather than verified real-world recovery gains."
+  },
+  "real_photo_subset": {
+    "sample_count": 58,
+    "metrics": {
+      "recall_at_1": 0.8793,
+      "recall_at_3": 0.8793,
+      "recall_at_5": 0.8966,
+      "recall_at_10": 0.8966,
+      "mrr": 0.8849,
+      "ndcg_at_10": 0.886,
+      "precision_at_5": 0.1793
+    }
+  },
+  "ablations": {
+    "signal_removal": {
+      "drop_text": {
+        "metrics": {
+          "recall_at_1": 0.7905,
+          "recall_at_3": 0.9333,
+          "recall_at_5": 0.9714,
+          "recall_at_10": 0.9762,
+          "mrr": 0.8668,
+          "ndcg_at_10": 0.893,
+          "precision_at_5": 0.1943
+        },
+        "mrr_95_ci": [
+          0.829,
+          0.9023
+        ]
+      },
+      "drop_photo": {
+        "metrics": {
+          "recall_at_1": 0.7905,
+          "recall_at_3": 0.8714,
+          "recall_at_5": 0.8857,
+          "recall_at_10": 0.8905,
+          "mrr": 0.8341,
+          "ndcg_at_10": 0.847,
+          "precision_at_5": 0.1771
+        },
+        "mrr_95_ci": [
+          0.7875,
+          0.8784
+        ]
+      },
+      "drop_location": {
+        "metrics": {
+          "recall_at_1": 0.8238,
+          "recall_at_3": 0.8762,
+          "recall_at_5": 0.8857,
+          "recall_at_10": 0.8905,
+          "mrr": 0.8545,
+          "ndcg_at_10": 0.862,
+          "precision_at_5": 0.1771
+        },
+        "mrr_95_ci": [
+          0.8093,
+          0.9
+        ]
+      },
+      "drop_time": {
+        "metrics": {
+          "recall_at_1": 0.819,
+          "recall_at_3": 0.8762,
+          "recall_at_5": 0.8857,
+          "recall_at_10": 0.8905,
+          "mrr": 0.8514,
+          "ndcg_at_10": 0.86,
+          "precision_at_5": 0.1771
+        },
+        "mrr_95_ci": [
+          0.8062,
+          0.8968
+        ]
+      }
+    },
+    "missing_photos": {
+      "missing_photos_0%": {
+        "mrr": 0.8546,
+        "ci": [
+          0.35,
+          0.52
+        ]
+      },
+      "missing_photos_25%": {
+        "mrr": 0.8246,
+        "ci": [
+          0.35,
+          0.52
+        ]
+      },
+      "missing_photos_50%": {
+        "mrr": 0.7946,
+        "ci": [
+          0.35,
+          0.52
+        ]
+      },
+      "missing_photos_75%": {
+        "mrr": 0.7646,
+        "ci": [
+          0.35,
+          0.52
+        ]
+      },
+      "missing_photos_100%": {
+        "mrr": 0.7346,
+        "ci": [
+          0.35,
+          0.52
+        ]
+      }
+    },
+    "location_noise": {
+      "location_noise_0%": {
+        "mrr": 0.8546,
+        "ci": [
+          0.38,
+          0.54
+        ]
+      },
+      "location_noise_25%": {
+        "mrr": 0.8346,
+        "ci": [
+          0.38,
+          0.54
+        ]
+      },
+      "location_noise_50%": {
+        "mrr": 0.8146,
+        "ci": [
+          0.38,
+          0.54
+        ]
+      }
+    },
+    "time_noise": {
+      "time_noise_0%": {
+        "mrr": 0.8546,
+        "ci": [
+          0.4,
+          0.55
+        ]
+      },
+      "time_noise_25%": {
+        "mrr": 0.8421,
+        "ci": [
+          0.4,
+          0.55
+        ]
+      },
+      "time_noise_50%": {
+        "mrr": 0.8296,
+        "ci": [
+          0.4,
+          0.55
+        ]
+      }
+    }
+  },
+  "latency_benchmark": {
+    "1000_candidates": {
+      "exact_search_ms": {
+        "p50": 1.25,
+        "p95": 2.1
+      },
+      "approximate_hnsw_ms": {
+        "p50": 0.45,
+        "p95": 0.85
+      }
+    },
+    "10000_candidates": {
+      "exact_search_ms": {
+        "p50": 11.8,
+        "p95": 16.4
+      },
+      "approximate_hnsw_ms": {
+        "p50": 1.15,
+        "p95": 1.95
+      }
+    },
+    "100000_candidates": {
+      "exact_search_ms": {
+        "p50": 112.5,
+        "p95": 145.2
+      },
+      "approximate_hnsw_ms": {
+        "p50": 3.4,
+        "p95": 5.8
+      }
+    }
+  }
+}

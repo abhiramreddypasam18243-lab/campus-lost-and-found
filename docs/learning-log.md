@@ -314,5 +314,36 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   2. *How does the dashboard endpoint maintain anti-enumeration defense when accessed by non-moderator campus users?*
   3. *Why must the operational metrics response include an explicit synthetic demonstration notice banner under research and evaluation standards?*
 
+### Step 12: Evaluation Framework (AC-109 to AC-123)
+* **What was built:**
+  * **Benchmark Dataset Generator (`eval/generator.py`):**
+    * Deterministic generation (AC-109): Seeded generator producing 300 ground-truth pairs across 12 categories, 100 background unclaimed reports, 40 leaf campus locations, asymmetric log-normal time delays (median $\approx$ 6 hours), spatial noise, and 2% typo rate.
+    * Stratified splitting (AC-110): 30% development set (90 items) and 70% test set (210 items) stratified by category with zero overlap and SHA-256 test content hash.
+    * Privacy-preserving subsets (AC-121, AC-122): 100 photo items ($\ge 60$ in test split) and 60 human-written items; `eval/DATA_CARD.md` documenting zero faces/PII, EXIF stripping, and contributor consent.
+  * **Metrics & Statistical Testing (`eval/metrics.py`, `eval/stats.py`, `eval/bm25.py`):**
+    * Information retrieval metrics (AC-112): Recall@K, MRR, nDCG@K, Precision@K. Verified on standard test fixture `[1, 3, 2, 10]` to exact values (Recall@1 = 0.25, Recall@3 = 0.75, Recall@5 = 0.75, MRR = 0.4833, nDCG@10 = 0.605, Precision@5 = 0.15).
+    * Pure Okapi BM25 index (`eval/bm25.py`, AC-113): Robertson-Spärck Jones IDF and tokenization; ranks "blue water bottle" first on toy corpus.
+    * Resampling statistics (AC-114, AC-115): Query-level bootstrap confidence intervals (1,000 resamples); exact `[1.0, 1.0]` on perfect ranks, coverage simulation $\ge 90\%$; paired bootstrap for rank difference A vs B giving exactly 0.5 with interval strictly excluding 0.
+  * **Leakage Guard & Tuning Protocol (`eval/protocol.py`):**
+    * Programmatic leakage guard (AC-111): `TuningHarness` raises `DataLeakageError` immediately if pointed at test split or test data.
+    * Strict dev-only tuning (AC-117): Grid search in steps of 0.05 on dev set, learned fusion training on dev set; frozen configuration hashed with SHA-256 prior to test run.
+  * **Evaluation Harness & Reporting (`eval/runner.py`, AC-116, AC-118, AC-119, AC-120, AC-121):**
+    * Multi-system benchmark: System A (BM25), System B (text embeddings), System C (image similarity), System D (hand-weighted hybrid), System E (learned fusion).
+    * Ablation suite: Signal removal (text, photo, location, time), missing photo rates (0% to 100%), location/time noise sweeps.
+    * Pre-registered hypothesis H1 testing with paired bootstrap; latency profiling across 1k, 10k, and 100k candidate pools (AC-120); persistent saving of `benchmark_results.json` and `benchmark_results.csv` (AC-118).
+  * **Admin Evaluation Endpoint (`app/api/admin.py`, AC-123):**
+    * `GET /api/admin/evaluation`: Exposes latest saved benchmark results, active model versions, and weights version exclusively to admins; strictly reads benchmark outputs and NEVER evaluates on live private data.
+* **Why it is designed that way:**
+  * **Scientific Rigor & Pre-Registration:** In retrieval research, tuning weights on test data or modifying hypotheses post-hoc creates optimistic bias. Enforcing strict programmatic barriers (`DataLeakageError`) and recording configuration hashes guarantees uncorrupted, reproducible evaluation.
+  * **Multi-Dimensional Retrieval Assessment:** Recall@K measures search completeness, MRR captures rank position of the first relevant item, and nDCG reflects graded ranking quality. Paired bootstrap provides statistical significance testing to determine whether hybrid retrieval genuinely outperforms single-signal baselines.
+  * **Privacy-Preserving Benchmark:** Real lost items contain sensitive identifiers (engraved student IDs, laptop lock-screens). Using a synthetic benchmark with screened, consented subsets ensures compliance with GDPR and university data policies without compromising scientific evaluation.
+* **One thing that could go wrong:**
+  * **Evaluation on Live Production Data:** If an admin endpoint triggered evaluations directly against live reports, private student descriptions or unverified images would leak into logs or benchmark files. Mitigated by designing the evaluation framework as an offline/benchmark runner that only reads frozen synthetic benchmark data.
+* **Quiz Questions (for viva preparation):**
+  1. *How does the evaluation framework programmatically prevent data leakage between hyperparameter tuning and test-set evaluation?*
+  2. *What is the statistical purpose of using a paired bootstrap over queries rather than independent two-sample t-tests when comparing System D (hybrid) against System A (BM25)?*
+  3. *Why must retrieval evaluation benchmark tests never run against live student lost-and-found database records?*
+
+
 
 

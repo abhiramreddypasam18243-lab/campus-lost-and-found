@@ -1,5 +1,7 @@
+import json
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -299,3 +301,52 @@ async def trigger_retention_sweep(
         purged_images=purged_images,
         purged_audit_logs=purged_audit_logs,
     )
+
+
+class AdminEvaluationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    timestamp: str
+    seed: int
+    dataset_hash: str
+    config_hash: str
+    git_commit: str
+    hardware: dict[str, Any]
+    models: dict[str, str]
+    weights: dict[str, float]
+    systems: dict[str, Any]
+    hypothesis_h1: dict[str, Any]
+    real_photo_subset: dict[str, Any]
+    ablations: dict[str, Any]
+    latency_benchmark: dict[str, Any]
+
+
+@router.get("/evaluation", response_model=AdminEvaluationResponse)
+async def get_admin_evaluation(
+    current_admin: User = Depends(require_admin_user),
+) -> AdminEvaluationResponse:
+    """AC-123: View latest saved retrieval evaluation benchmark results.
+
+    Never evaluates on live private data.
+    """
+    results_paths = [
+        Path("/app/eval/results/benchmark_results.json"),
+        Path(__file__).resolve().parent.parent.parent.parent / "eval" / "results" / "benchmark_results.json",
+        Path("eval/results/benchmark_results.json"),
+    ]
+    data = None
+    for p in results_paths:
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                break
+            except Exception:
+                continue
+
+    if not data:
+        from eval.runner import run_full_evaluation
+
+        data = run_full_evaluation()
+
+    return AdminEvaluationResponse(**data)
+

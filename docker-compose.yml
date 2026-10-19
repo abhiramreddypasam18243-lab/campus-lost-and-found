@@ -34,6 +34,7 @@ services:
       - CORS_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
     volumes:
       - ./backend:/app
+      - ./eval:/app/eval
       - image_data:/app/uploads
     depends_on:
       db:
@@ -62,6 +63,7 @@ services:
       - SMTP_PORT=1025
     volumes:
       - ./backend:/app
+      - ./eval:/app/eval
       - image_data:/app/uploads
     depends_on:
       db:

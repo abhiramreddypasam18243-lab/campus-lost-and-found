@@ -1,0 +1,27 @@
+{
+  "weights": {
+    "w_text": 0.7,
+    "w_photo": 0.2,
+    "w_location": 0.05,
+    "w_time": 0.05
+  },
+  "learned_fusion": {
+    "model_type": "logistic_regression",
+    "weights": {
+      "text_coef": 2.85,
+      "photo_coef": 2.45,
+      "location_coef": 1.65,
+      "time_coef": 1.1,
+      "has_photo_bias": 0.15,
+      "intercept": -3.2
+    },
+    "training_samples": 90,
+    "split": "dev"
+  },
+  "seed": 42,
+  "dataset_test_hash": "2d8bb4d3e49586131ba2cbbc03e6c947af6d631bc953751fd8820f87a7c84565",
+  "dev_items_count": 90,
+  "test_items_count": 210,
+  "version": "1.0.0-frozen",
+  "config_hash": "593848fdab7e97bda877c07a464b96ab8bce478f40cbebc0edfe7010b3e62185"
+}

@@ -121,6 +121,50 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   2. *Why is cursor-based pagination using a composite tuple `(created_at, id)` preferred over traditional `OFFSET`/`LIMIT` pagination in high-frequency lost-and-found databases?*
   3. *How does the building filter use a recursive Common Table Expression (CTE) to include items located on lower hierarchical levels (such as specific rooms or floors) without exposing those finer locations to the public?*
 
+## Step 6: Background Jobs, Model Registry, and Notification Outbox
+* **Acceptance Criteria:** AC-45 to AC-50, AC-68 to AC-74
+* **What was built:**
+  * **Database Infrastructure & Migration (`0006_jobs_embed_notifs.py`):**
+    * Background job queue table (`jobs`) with composite index `(status, run_after)` supporting worker polling and exponential retry backoff.
+    * Model registry (`model_registry`) and pgvector tables (`report_text_embeddings` with `vector(384)`, `report_image_embeddings` with `vector(512)`) enforcing unique version constraints `(entity_id, model_name, model_version)`.
+    * Transactional notification outbox table (`notifications`) with unique constraint `uq_notifications_event_key` and per-user index.
+  * **Transactional Background Job Enqueueing (AC-45):**
+    * Saving a lost or found report transactional-enqueues `embed_report_text`, and uploading a photo transactional-enqueues `embed_report_image`.
+    * Fast return latency (< 300 ms with models off or mock embeddings).
+  * **Concurrent Lock-Free Queue Workers (AC-46):**
+    * `claim_jobs()` worker engine using PostgreSQL `SELECT FOR UPDATE SKIP LOCKED` ensuring multiple concurrent workers never process or duplicate the same job (verified with 2 concurrent workers claiming 200 jobs with zero overlap).
+  * **Retry Backoff & Admin Controls (AC-47):**
+    * Structured exponential backoff retry policy (`[1, 2, 4, 8]` minutes, max 5 attempts); transitions to `failed` upon the 5th failure.
+    * Admin job inspection (`GET /api/admin/jobs`) and manual retry (`POST /api/admin/jobs/{id}/retry`) resetting attempts and status for failed jobs.
+  * **Embedding Model Registry & Backfill (AC-48, AC-49, AC-50):**
+    * Idempotent vector insertion (`upsert_report_text_embedding` / `upsert_report_image_embedding`).
+    * Model activation workflow (`activate_model_version` and `POST /api/admin/models/activate`) that sets the active version and enqueues backfill jobs across all open reports.
+    * Database-level pgvector dimension validation (verifying PostgreSQL strictly rejects mismatched vector dimensions).
+  * **Transactional Notification Outbox & Deduplication (AC-68, AC-69, AC-70):**
+    * Transactional consistency: rolling back a business transaction automatically aborts notification creation, preventing ghost emails.
+    * Idempotent deduplication on `event_key` guaranteeing duplicate events produce a single notification record.
+    * Deterministic RFC 5322 `Message-ID` generation (`<event_key@campus.domain>`) enabling client-side email threading and duplicate suppression.
+    * SMTP delivery error handling with retry backoff and failure state logging.
+  * **Notification Privacy & User Preferences (AC-71, AC-72, AC-73):**
+    * Whitelisted notification template rendering with automated canary verification: private details, verification prompts, and student PII are never leaked in email subjects or bodies.
+    * Preference enforcement: user opt-out (`notify_matches: false`) skips match emails while preserving critical claim/handover communications.
+    * Spam protection: hard cap of 5 match suggestion emails per user per 24-hour window.
+  * **In-App Notification API (AC-74):**
+    * Paginated, owner-only notification inbox (`GET /api/notifications`) with filters (`status=all|unread|read`) and stable cursor pagination.
+    * Read receipt tracking (`POST /api/notifications/{id}/read`) with 404 anti-enumeration against other users' notifications.
+* **Why it is designed that way:**
+  * **Transactional Outbox Pattern:** By writing job records and notifications into PostgreSQL within the same database transaction as reports and claims, we solve the dual-write problem. If the transaction aborts, no orphaned jobs or emails are sent. If external systems (SMTP, embedding inference) are temporarily offline, the persistent queue ensures durable delivery without data loss.
+  * **`SELECT FOR UPDATE SKIP LOCKED`:** PostgreSQL natively coordinates concurrent workers without distributed locking (Redis, ZooKeeper). Unclaimed jobs are locked and handed to the requesting worker, while other workers skip already locked rows without waiting, achieving maximum concurrency and zero duplicates.
+  * **Model Registry Decoupling:** Storing model names, versions, and embedding dimensions in a model registry decouples ML model lifecycle from application code. Activating a newer embedding model automatically triggers background backfilling for historical records while preserving existing vectors.
+  * **Canonical Event Keys:** Using deterministic event keys (e.g., `match_suggested:reportA:reportB`) prevents notification floods caused by worker restarts, duplicate webhooks, or retry loops.
+* **One thing that could go wrong:**
+  * **Alembic Revision ID Column Width:** PostgreSQL `alembic_version.version_num` is a `VARCHAR(32)` column. Migration revision IDs exceeding 32 characters (e.g. `0006_jobs_embeddings_notifications`) trigger database-level string truncation errors. Keeping revision identifiers concise (e.g., `0006_jobs_embed_notifs`) prevents deployment failures.
+  * **ORM ID Population Timing:** In SQLAlchemy, auto-generated UUIDs on models are populated only upon database insert or flush. Accessing `model.id` before flush produces `None`. Explicitly passing `id=uuid.uuid4()` at instantiation ensures `entity_id` is never null when enqueuing background jobs.
+* **Quiz Questions (for viva preparation):**
+  1. *How does PostgreSQL's `SELECT ... FOR UPDATE SKIP LOCKED` provide a reliable, concurrent work queue without requiring an external message broker like Redis or RabbitMQ?*
+  2. *What is the Transactional Outbox Pattern, and how does it prevent the "dual-write" consistency hazard between relational databases and external services like email or ML workers?*
+  3. *Why should background job retry intervals use exponential backoff (e.g., 1, 2, 4, 8 minutes) instead of immediate or fixed-interval retries?*
+
 
 
 

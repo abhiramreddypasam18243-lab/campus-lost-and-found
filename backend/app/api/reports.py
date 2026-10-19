@@ -31,6 +31,7 @@ from app.schemas.report import (
     ReportResponse,
 )
 from app.services.audit import write_audit_log
+from app.services.job_queue import enqueue_job
 from app.services.location import resolve_building_for_location
 from app.services.photo import process_and_save_photo
 
@@ -121,7 +122,9 @@ async def create_lost_report(
         exact_time=payload.exact_time,
     )
 
+    report_id = uuid.uuid4()
     report = ItemReport(
+        id=report_id,
         type="lost",
         status="open",
         title=payload.title.strip(),
@@ -134,19 +137,18 @@ async def create_lost_report(
         time_precision=payload.time_precision,
     )
     db.add(report)
-    await db.commit()
-    await db.refresh(report)
-
+    await enqueue_job(db, kind="embed_report_text", entity_id=report_id)
     await write_audit_log(
         db=db,
         actor_id=current_user.id,
         role=current_user.role,
         action="create_lost_report",
         entity_type="item_report",
-        entity_id=report.id,
+        entity_id=report_id,
         summary={"category": report.category, "location_id": str(report.location_id)},
     )
     await db.commit()
+    await db.refresh(report)
 
     return _to_report_response(report, current_user)
 
@@ -186,7 +188,9 @@ async def create_found_report(
         exact_time=payload.exact_time,
     )
 
+    report_id = uuid.uuid4()
     report = ItemReport(
+        id=report_id,
         type="found",
         status="pending_review",  # AC-22: Starts as pending_review
         title=payload.title.strip(),
@@ -201,19 +205,18 @@ async def create_found_report(
         verification_prompts=[p.strip() for p in payload.verification_prompts],
     )
     db.add(report)
-    await db.commit()
-    await db.refresh(report)
-
+    await enqueue_job(db, kind="embed_report_text", entity_id=report_id)
     await write_audit_log(
         db=db,
         actor_id=current_user.id,
         role=current_user.role,
         action="create_found_report",
         entity_type="item_report",
-        entity_id=report.id,
+        entity_id=report_id,
         summary={"category": report.category, "location_id": str(report.location_id)},
     )
     await db.commit()
+    await db.refresh(report)
 
     return _to_report_response(report, current_user)
 
@@ -483,7 +486,9 @@ async def upload_report_image(
                 )
                 break
 
+    image_id = uuid.uuid4()
     img_record = ItemImage(
+        id=image_id,
         report_id=report.id,
         storage_key=processed.storage_key,
         original_mime=processed.original_mime,
@@ -495,6 +500,12 @@ async def upload_report_image(
         moderation_status="approved" if is_staff else "pending",
     )
     db.add(img_record)
+    await enqueue_job(
+        db,
+        kind="embed_report_image",
+        entity_id=image_id,
+        payload={"report_id": str(report.id)},
+    )
     await db.commit()
     await db.refresh(img_record)
 

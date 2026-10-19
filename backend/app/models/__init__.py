@@ -1,4 +1,5 @@
 from app.models.audit import AuditLog
+from app.models.claims import Claim
 from app.models.embeddings import ImageEmbedding, ModelRegistry, TextEmbedding
 from app.models.jobs import BackgroundJob
 from app.models.location import CampusLocation, LocationAdjacency
@@ -23,4 +24,5 @@ __all__ = [
     "Notification",
     "MatchCandidate",
     "MatchFeedback",
+    "Claim",
 ]

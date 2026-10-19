@@ -1,0 +1,119 @@
+"""Claim API endpoints for submitting, viewing, updating, and withdrawing claims (AC-75, AC-77, AC-82, AC-83)."""
+
+import uuid
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.auth import require_authenticated_user, require_verified_user, verify_csrf
+from app.core.database import get_db
+from app.domain.claims import is_claim_escalated
+from app.models.claims import Claim
+from app.models.user import User
+from app.schemas.claims import ClaimCreate, ClaimEvidenceUpdate, ClaimResponse
+from app.services import claims as claim_service
+
+router = APIRouter(prefix="/api/claims", tags=["claims"])
+
+
+def to_claim_response(claim: Claim) -> ClaimResponse:
+    now = datetime.now(UTC)
+    escalated = is_claim_escalated(claim.submitted_at, now, claim.status)
+    return ClaimResponse(
+        id=claim.id,
+        found_id=claim.found_id,
+        lost_id=claim.lost_id,
+        claimant_id=claim.claimant_id,
+        evidence=claim.evidence,
+        answers=claim.answers,
+        image_ids=claim.image_ids,
+        status=claim.status,
+        decision_note=claim.decision_note,
+        reviewer_id=claim.reviewer_id,
+        locked_by_id=claim.locked_by_id,
+        lock_expires_at=claim.lock_expires_at,
+        submitted_at=claim.submitted_at,
+        reviewed_at=claim.reviewed_at,
+        escalated=escalated,
+        created_at=claim.created_at,
+    )
+
+
+@router.post(
+    "",
+    response_model=ClaimResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(verify_csrf)],
+)
+async def submit_claim(
+    payload: ClaimCreate,
+    current_user: User = Depends(require_verified_user),
+    db: AsyncSession = Depends(get_db),
+) -> ClaimResponse:
+    """AC-75: Submit a claim on a found item with prompt answers and evidence."""
+    claim = await claim_service.create_claim(db, current_user, payload)
+    return to_claim_response(claim)
+
+
+@router.get(
+    "/my",
+    response_model=list[ClaimResponse],
+)
+async def list_my_claims(
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[ClaimResponse]:
+    """List claims submitted by the current user."""
+    stmt = (
+        select(Claim).where(Claim.claimant_id == current_user.id).order_by(Claim.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    claims = result.scalars().all()
+    return [to_claim_response(c) for c in claims]
+
+
+@router.get(
+    "/{claim_id}",
+    response_model=ClaimResponse,
+)
+async def get_claim(
+    claim_id: uuid.UUID,
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db),
+) -> ClaimResponse:
+    """AC-77: View claim detail. Allowed only for claimant and moderators (404 otherwise)."""
+    claim = await claim_service.get_claim_detail(db, claim_id, current_user)
+    return to_claim_response(claim)
+
+
+@router.post(
+    "/{claim_id}/withdraw",
+    response_model=ClaimResponse,
+    dependencies=[Depends(verify_csrf)],
+)
+async def withdraw_claim(
+    claim_id: uuid.UUID,
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db),
+) -> ClaimResponse:
+    """AC-83: Withdraw a claim."""
+    claim = await claim_service.withdraw_claim(db, claim_id, current_user)
+    return to_claim_response(claim)
+
+
+@router.patch(
+    "/{claim_id}/evidence",
+    response_model=ClaimResponse,
+    dependencies=[Depends(verify_csrf)],
+)
+async def update_claim_evidence(
+    claim_id: uuid.UUID,
+    payload: ClaimEvidenceUpdate,
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db),
+) -> ClaimResponse:
+    """AC-82: Add evidence when info requested, returning claim to submitted."""
+    claim = await claim_service.update_claim_evidence(db, claim_id, current_user, payload)
+    return to_claim_response(claim)

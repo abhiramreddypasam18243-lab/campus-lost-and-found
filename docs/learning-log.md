@@ -199,7 +199,35 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   2. *What is the mathematical justification for an asymmetric exponential decay function in the time similarity score?*
   3. *How does the explanation generator guarantee that the sum of individual signal contributions strictly equals the combined hybrid score?*
 
-
-
-
-
+### Step 8: Claims and Moderation (AC-75 to AC-85)
+* **What was built:**
+  * **Pure Domain Logic (`app/domain/claims.py`):**
+    * Exhaustive lifecycle transitions (AC-76): `submitted` $\to$ `under_review`, `withdrawn`; `under_review` $\to$ `approved`, `rejected`, `needs_more_info`, `withdrawn`; `needs_more_info` $\to$ `submitted`, `withdrawn`; `approved` $\to$ `completed`, `expired`, `withdrawn`; terminal states `rejected`, `completed`, `expired`, `withdrawn`.
+    * Validation & Prompt Answers (AC-75): Evidence text strictly 20 to 2000 characters; answers to every verification prompt; anti-self-claim; prevention of duplicate claims on the same found item.
+    * Abuse Prevention & Active Claim Limits (AC-84): Normal limit of 3 active claims; users with 3 rejected claims within 30 days are automatically limited to 1 active claim and flagged as `claimant_flagged=True` for staff.
+    * Concurrency & Review Locks (AC-78): Opening a claim assigns an exclusive 30-minute lock (`lock_expires_at = now + 30m`, `locked_by_id = mod.id`); prevents concurrent moderator decisions with HTTP 409 `claim_locked`; expired locks automatically become available to other staff.
+    * Conflict of Interest (AC-80): A moderator cannot decide a claim on an item they reported, or a claim they filed themselves (HTTP 403 `conflict_of_interest`).
+    * Escalation (AC-85): Unreviewed claims older than 14 days are marked `escalated=True` and prioritized first in the queue.
+  * **Database Infrastructure & Migrations (`0009_claims_table.py`):**
+    * Table `claims` with foreign keys to `item_reports` (found and optional lost) and `users` (claimant, reviewer, locked_by), JSONB answers and image_ids, timestamps, and composite performance indexes (`(claimant_id, status)`, `(found_id, status)`, `(status, submitted_at)`).
+  * **Services & API Endpoints (`services/claims.py`, `api/claims.py`, `api/moderation.py`):**
+    * `POST /api/claims`: Secure claim creation with CSRF, prompt validation, and active-claim limits.
+    * `GET /api/claims/{id}`: Privacy-enforced claim detail (AC-77); visible strictly to claimant and moderators (404 anti-enumeration for finder and other users).
+    * `POST /api/claims/{id}/withdraw` (AC-83): Claimant withdrawal; withdrawing an approved claim cancels the handover and reverts the found item back to `open`.
+    * `PATCH /api/claims/{id}/evidence` (AC-82): Allows claimants to amend evidence when in `needs_more_info`, transitioning back to `submitted` and re-entering the queue.
+    * `GET /api/mod/queue` (AC-78, AC-85): Unified moderator queue displaying pending reports, duplicate images, and active claims, ordered with escalated claims first, then submission time ascending.
+    * `POST /api/mod/claims/{id}/open`: Moderator lock acquisition for 30 minutes.
+    * `POST /api/mod/claims/{id}/approve` (AC-79, AC-81): Decision note $\ge 10$ characters, reserves found item (`item_reports.status = "reserved"`), blocks conflicting approvals (HTTP 409 `item_already_reserved`), creates transactional notification, and logs `claim.approved`.
+    * `POST /api/mod/claims/{id}/reject` (AC-79): Decision note $\ge 10$ characters, marks claim `rejected`, logs `claim.rejected`, and notifies claimant.
+    * `POST /api/mod/claims/{id}/request-info`: Decision note $\ge 10$ characters, transitions claim to `needs_more_info`, releases review lock, and notifies claimant.
+* **Why it is designed that way:**
+  * **Default-Deny Claim Privacy:** Claimants submit sensitive evidence (e.g., distinguishing engravings, unique scratches, purchase receipts, answers to private verification prompts). If this evidence were visible to the item finder or other campus users, malicious actors could copy those details and file fraudulent counter-claims.
+  * **Time-Bound Exclusive Review Locks:** In campus facilities with multiple staff members on duty, concurrent reviews without locking cause race conditions where two moderators approve competing claims simultaneously or issue duplicate handover instructions. The 30-minute lock prevents collision while an automatic expiration ensures that an abandoned review session does not lock a student's claim indefinitely.
+  * **Strict Conflict-of-Interest Controls:** Academic integrity and asset security require that staff members cannot self-certify ownership of items they reported finding or approve items they claim to have lost.
+  * **Reversible Reservation on Withdrawal:** When a claimant withdraws after approval (for example, if they locate their misplaced item at home), the found report is automatically returned to `open` so other students or queued claims can be evaluated without manual administrator intervention.
+* **One thing that could go wrong:**
+  * **Orphaned Locks on Abandoned Sessions:** If a moderator opens a claim and closes their tab or browser without making a decision, the claim remains locked until the 30-minute window expires. Handled by checking `lock_expires_at > now` in real time: once expired, any authorized moderator can re-open and acquire the review lock without manual unlock actions.
+* **Quiz Questions (for viva preparation):**
+  1. *Why must the finder of a found item be prevented from seeing claim evidence and prompt answers submitted by claimants?*
+  2. *How does the system enforce concurrency control and prevent duplicate decisions when multiple moderators review claims simultaneously?*
+  3. *What happens to a found report's status and subsequent claims if an approved claimant withdraws their claim prior to handover?*

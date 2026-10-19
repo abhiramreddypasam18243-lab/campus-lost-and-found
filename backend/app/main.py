@@ -6,7 +6,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.api import admin, auth, found, health, images, locations, matches, notifications, reports
+from app.api import (
+    admin,
+    auth,
+    claims,
+    found,
+    health,
+    images,
+    locations,
+    matches,
+    moderation,
+    notifications,
+    reports,
+)
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -85,4 +97,6 @@ app.include_router(found.router)
 app.include_router(images.router)
 app.include_router(notifications.router)
 app.include_router(matches.router)
+app.include_router(claims.router)
+app.include_router(moderation.router)
 app.include_router(admin.router)

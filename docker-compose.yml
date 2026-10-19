@@ -1,0 +1,92 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: campus_lost_and_found_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-campus_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-campus_secure_password}
+      POSTGRES_DB: ${POSTGRES_DB:-campus_lost_and_found}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-campus_user} -d ${POSTGRES_DB:-campus_lost_and_found}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campus_lost_and_found_backend
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-campus_user}:${POSTGRES_PASSWORD:-campus_secure_password}@db:5432/${POSTGRES_DB:-campus_lost_and_found}
+      - SYNC_DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-campus_user}:${POSTGRES_PASSWORD:-campus_secure_password}@db:5432/${POSTGRES_DB:-campus_lost_and_found}
+      - ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS:-campus.edu,student.campus.edu}
+      - SMTP_HOST=mail
+      - SMTP_PORT=1025
+      - CORS_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
+    volumes:
+      - image_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campus_lost_and_found_worker
+    restart: unless-stopped
+    command: ["python", "-m", "app.worker.main"]
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-campus_user}:${POSTGRES_PASSWORD:-campus_secure_password}@db:5432/${POSTGRES_DB:-campus_lost_and_found}
+      - SYNC_DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-campus_user}:${POSTGRES_PASSWORD:-campus_secure_password}@db:5432/${POSTGRES_DB:-campus_lost_and_found}
+      - SMTP_HOST=mail
+      - SMTP_PORT=1025
+    volumes:
+      - image_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: campus_lost_and_found_frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+  mail:
+    image: axllent/mailpit:latest
+    container_name: campus_lost_and_found_mail
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1025" # SMTP
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATA_FILE: ""
+
+volumes:
+  db_data:
+  image_data:

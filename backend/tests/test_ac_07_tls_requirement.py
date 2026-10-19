@@ -13,6 +13,7 @@ from app.models.user import User
 @pytest.mark.asyncio
 async def test_ac_07_tls_required_for_remote_client(db_session: AsyncSession) -> None:
     """AC-07 (SEC7): Plain HTTP login from non-localhost client returns 403 tls_required."""
+
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield db_session
 
@@ -53,7 +54,9 @@ async def test_ac_07_tls_required_for_remote_client(db_session: AsyncSession) ->
         app=app,
         client=("192.168.1.100", 50000),
     )
-    async with AsyncClient(transport=transport_remote_https, base_url="https://campus.edu") as client:
+    async with AsyncClient(
+        transport=transport_remote_https, base_url="https://campus.edu"
+    ) as client:
         res = await client.post(
             "/api/auth/login",
             json={"email": "tls_user@campus.edu", "password": "valid_password_1234"},

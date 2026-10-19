@@ -5,7 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_ac_11_sql_injection_defense(async_client: AsyncClient, db_session: AsyncSession) -> None:
+async def test_ac_11_sql_injection_defense(
+    async_client: AsyncClient, db_session: AsyncSession
+) -> None:
     """AC-11 (SEC8): SQL injection string stored and returned literally; tables intact."""
     injection_string = "'; DROP TABLE users;--"
     payload = {
@@ -17,7 +19,9 @@ async def test_ac_11_sql_injection_defense(async_client: AsyncClient, db_session
     assert res.status_code == 201
 
     # Verify users table is intact and contains literal injection string
-    result = await db_session.execute(text("SELECT display_name FROM users WHERE email = 'sqli_test@campus.edu'"))
+    result = await db_session.execute(
+        text("SELECT display_name FROM users WHERE email = 'sqli_test@campus.edu'")
+    )
     row = result.first()
     assert row is not None
     assert row[0] == injection_string

@@ -57,6 +57,7 @@ def utc_now() -> datetime:
 
 class LoginRateLimiter:
     """In-memory rate limiter for failed login attempts (SEC6, AC-04)."""
+
     def __init__(self, max_attempts: int = 5, window_seconds: int = 900) -> None:
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
@@ -107,10 +108,15 @@ def check_tls_requirement(request: Request) -> None:
         forwarded_proto = request.headers.get("X-Forwarded-Proto")
 
         # Untrusted clients cannot forge forwarded headers
-        is_secure = scheme == "https" or (forwarded_proto == "https" and client_host in ("127.0.0.1", "nginx"))
+        is_secure = scheme == "https" or (
+            forwarded_proto == "https" and client_host in ("127.0.0.1", "nginx")
+        )
 
         if not is_secure:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail={"code": "tls_required", "message": "Credentials require TLS over the network."},
+                detail={
+                    "code": "tls_required",
+                    "message": "Credentials require TLS over the network.",
+                },
             )

@@ -49,7 +49,10 @@ async def register(
     if domain not in settings.ALLOWED_EMAIL_DOMAINS:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={"code": "email_domain_not_allowed", "message": f"Domain '@{domain}' is not allowed."},
+            detail={
+                "code": "email_domain_not_allowed",
+                "message": f"Domain '@{domain}' is not allowed.",
+            },
         )
 
     # Check for existing email (case-insensitive)
@@ -117,7 +120,10 @@ async def verify_email(
     if not token_entry or token_entry.used_at is not None or token_entry.expires_at < now:
         raise HTTPException(
             status_code=status.HTTP_410_GONE,
-            detail={"code": "token_expired_or_invalid", "message": "Verification link has expired or been used."},
+            detail={
+                "code": "token_expired_or_invalid",
+                "message": "Verification link has expired or been used.",
+            },
         )
 
     # Mark token used and user verified
@@ -212,6 +218,7 @@ async def login(
         secure=is_tls,
         path="/",
     )
+    response.headers["X-CSRF-Token"] = raw_csrf_token
 
     return LoginResponse(
         user=UserResponse(

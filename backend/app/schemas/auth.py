@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 class RegisterRequest(BaseModel):
     """User registration schema."""
+
     model_config = ConfigDict(extra="forbid")
 
     email: EmailStr
@@ -15,6 +16,7 @@ class RegisterRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     """User login schema."""
+
     model_config = ConfigDict(extra="forbid")
 
     email: EmailStr
@@ -23,6 +25,7 @@ class LoginRequest(BaseModel):
 
 class VerifyEmailRequest(BaseModel):
     """Email verification schema."""
+
     model_config = ConfigDict(extra="forbid")
 
     token: str = Field(min_length=16, max_length=128)
@@ -30,6 +33,7 @@ class VerifyEmailRequest(BaseModel):
 
 class UserResponse(BaseModel):
     """Public authenticated user profile (whitelisted fields only)."""
+
     model_config = ConfigDict(extra="forbid")
 
     id: uuid.UUID
@@ -42,6 +46,7 @@ class UserResponse(BaseModel):
 
 class LoginResponse(BaseModel):
     """Login response with CSRF token and user profile."""
+
     model_config = ConfigDict(extra="forbid")
 
     user: UserResponse

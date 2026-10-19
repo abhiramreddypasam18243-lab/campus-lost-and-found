@@ -9,7 +9,9 @@ from app.models.user import EmailToken, User
 
 
 @pytest.mark.asyncio
-async def test_ac_02_email_verification_flow(async_client: AsyncClient, db_session: AsyncSession) -> None:
+async def test_ac_02_email_verification_flow(
+    async_client: AsyncClient, db_session: AsyncSession
+) -> None:
     """AC-02: Verification link works once, verifies account; reused or expired returns 410."""
     now = datetime.now(UTC)
     user = User(

@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
@@ -33,10 +34,15 @@ async def clean_database_and_state() -> AsyncGenerator[None, None]:
     login_rate_limiter.attempts.clear()
     async with TestAsyncSessionLocal() as session:
         try:
-            await session.execute(text("TRUNCATE TABLE users, email_tokens, sessions, audit_log RESTART IDENTITY CASCADE;"))
+            await session.execute(
+                text(
+                    "TRUNCATE TABLE users, email_tokens, sessions, audit_log, location_adjacency, campus_locations RESTART IDENTITY CASCADE;"
+                )
+            )
             await session.commit()
         except Exception:
             await session.rollback()
+
     yield
     login_rate_limiter.attempts.clear()
 
@@ -51,6 +57,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture
 async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Provide an asynchronous HTTP client wired to the isolated database session."""
+
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield db_session
 

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.api import auth, health
+from app.api import auth, health, locations
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -16,6 +16,7 @@ MAX_NON_UPLOAD_BODY_BYTES = 1024 * 1024  # 1 MB (AC-15, SEC8)
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Enforce required security headers on all responses."""
+
     async def dispatch(self, request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
         response: Response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -30,6 +31,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 class MaxBodySizeMiddleware(BaseHTTPMiddleware):
     """AC-15 & SEC8: Reject non-upload request bodies exceeding 1 MB with HTTP 413."""
+
     async def dispatch(self, request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
         content_length = request.headers.get("content-length")
         # Exclude multi-part image uploads handled separately
@@ -38,7 +40,10 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
             if int(content_length) > MAX_NON_UPLOAD_BODY_BYTES:
                 return JSONResponse(
                     status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                    content={"code": "request_entity_too_large", "message": "Request body exceeds 1 MB limit."},
+                    content={
+                        "code": "request_entity_too_large",
+                        "message": "Request body exceeds 1 MB limit.",
+                    },
                 )
         response: Response = await call_next(request)
         return response
@@ -74,3 +79,4 @@ app.add_middleware(MaxBodySizeMiddleware)
 # Include Routers
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(locations.router)

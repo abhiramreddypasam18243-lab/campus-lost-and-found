@@ -14,10 +14,14 @@ def test_ac_09_ownership_domain_logic() -> None:
     assert can_access_resource(resource_owner_id=user_a, actor_id=user_a, actor_role="user") is True
 
     # User B accesses User A's resource -> False (will trigger 404 in API router)
-    assert can_access_resource(resource_owner_id=user_a, actor_id=user_b, actor_role="user") is False
+    assert (
+        can_access_resource(resource_owner_id=user_a, actor_id=user_b, actor_role="user") is False
+    )
 
     # Moderator accesses User A's resource -> True
-    assert can_access_resource(resource_owner_id=user_a, actor_id=mod, actor_role="moderator") is True
+    assert (
+        can_access_resource(resource_owner_id=user_a, actor_id=mod, actor_role="moderator") is True
+    )
 
     # Admin accesses User A's resource -> True
     assert can_access_resource(resource_owner_id=user_a, actor_id=admin, actor_role="admin") is True

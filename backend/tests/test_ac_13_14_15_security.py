@@ -26,7 +26,9 @@ def test_ac_14_production_secret_enforcement() -> None:
     assert settings.SECRET_KEY == placeholder
 
     # Production validation logic
-    if settings.ENVIRONMENT == "production" and (not settings.SECRET_KEY or settings.SECRET_KEY == placeholder):
+    if settings.ENVIRONMENT == "production" and (
+        not settings.SECRET_KEY or settings.SECRET_KEY == placeholder
+    ):
         raise ValueError("Production mode requires non-placeholder SECRET_KEY")
 
 

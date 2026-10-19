@@ -81,6 +81,7 @@ async def require_verified_user(
 
 def require_role(*allowed_roles: str) -> Callable[..., Any]:
     """AC-08 (SEC4): Enforce role-based access control based on session role."""
+
     async def role_checker(user: User = Depends(require_authenticated_user)) -> User:
         if user.role not in allowed_roles:
             raise HTTPException(
@@ -88,6 +89,7 @@ def require_role(*allowed_roles: str) -> Callable[..., Any]:
                 detail={"code": "forbidden", "message": f"Requires one of: {allowed_roles}"},
             )
         return user
+
     return role_checker
 
 

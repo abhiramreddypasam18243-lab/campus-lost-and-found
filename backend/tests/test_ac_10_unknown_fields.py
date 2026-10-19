@@ -12,7 +12,9 @@ async def test_ac_10_unknown_fields_forbidden(async_client: AsyncClient) -> None
     }
     res_reg = await async_client.post("/api/auth/register", json=payload_register)
     assert res_reg.status_code == 422
-    assert "extra_forbidden" in str(res_reg.json()) or "extra fields not permitted" in str(res_reg.json())
+    assert "extra_forbidden" in str(res_reg.json()) or "extra fields not permitted" in str(
+        res_reg.json()
+    )
 
     payload_login = {
         "email": "test_extra@campus.edu",

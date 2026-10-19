@@ -7,7 +7,9 @@ from app.models.user import User
 
 
 @pytest.mark.asyncio
-async def test_ac_05_logout_session_invalidation(async_client: AsyncClient, db_session: AsyncSession) -> None:
+async def test_ac_05_logout_session_invalidation(
+    async_client: AsyncClient, db_session: AsyncSession
+) -> None:
     """AC-05: After logout, the old session cookie returns 401 on protected endpoints."""
     user = User(
         email="logout_test@campus.edu",

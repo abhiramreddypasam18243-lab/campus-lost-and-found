@@ -57,8 +57,12 @@ async def test_ac_08_role_matrix(async_client: AsyncClient, db_session: AsyncSes
         cookies = {"session_id": tok} if tok else {}
         res = await async_client.get("/api/me", cookies=cookies)
         if role == "anonymous":
-            assert res.status_code == 401, f"Expected 401 for anonymous on /api/me, got {res.status_code}"
+            assert res.status_code == 401, (
+                f"Expected 401 for anonymous on /api/me, got {res.status_code}"
+            )
         else:
-            assert res.status_code == 200, f"Expected 200 for {role} on /api/me, got {res.status_code}"
+            assert res.status_code == 200, (
+                f"Expected 200 for {role} on /api/me, got {res.status_code}"
+            )
             data = res.json()
             assert data["role"] == role

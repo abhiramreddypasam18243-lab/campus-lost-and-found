@@ -7,7 +7,9 @@ from app.models.user import User
 
 
 @pytest.mark.asyncio
-async def test_ac_01_registration_success(async_client: AsyncClient, db_session: AsyncSession) -> None:
+async def test_ac_01_registration_success(
+    async_client: AsyncClient, db_session: AsyncSession
+) -> None:
     """AC-01: Valid campus email creates unverified account with Argon2id hash; password not returned."""
     payload = {
         "email": "student1@campus.edu",

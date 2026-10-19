@@ -7,7 +7,9 @@ from app.models.user import User
 
 
 @pytest.mark.asyncio
-async def test_ac_04_login_cookie_and_security(async_client: AsyncClient, db_session: AsyncSession) -> None:
+async def test_ac_04_login_cookie_and_security(
+    async_client: AsyncClient, db_session: AsyncSession
+) -> None:
     """AC-04: Login sets HttpOnly, SameSite=Lax cookie; wrong email & wrong password return identical 401."""
     pwd = "secure_test_password_1234"
     user = User(
@@ -51,7 +53,9 @@ async def test_ac_04_login_cookie_and_security(async_client: AsyncClient, db_ses
 
 
 @pytest.mark.asyncio
-async def test_ac_04_login_rate_limiting(async_client: AsyncClient, db_session: AsyncSession) -> None:
+async def test_ac_04_login_rate_limiting(
+    async_client: AsyncClient, db_session: AsyncSession
+) -> None:
     """AC-04 (SEC6): 6th failed login within 15 minutes returns 429 with Retry-After header."""
     user = User(
         email="ratelimit_target@campus.edu",

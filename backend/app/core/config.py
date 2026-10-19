@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        extra="ignore"
+        extra="ignore",
     )
 
     # Core Environment
@@ -18,17 +18,15 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
     FRONTEND_PORT: int = 8080
 
-    # Campus Domain Whitelist
-    ALLOWED_EMAIL_DOMAINS: list[str] = ["campus.edu", "student.campus.edu"]
+    # Campus Domain Whitelist (parsed from comma-separated string)
+    ALLOWED_EMAIL_DOMAINS_RAW: str = Field(
+        default="campus.edu,student.campus.edu",
+        validation_alias="ALLOWED_EMAIL_DOMAINS",
+    )
 
-    @field_validator("ALLOWED_EMAIL_DOMAINS", mode="before")
-    @classmethod
-    def parse_allowed_domains(cls, v: object) -> list[str]:
-        if isinstance(v, str):
-            return [d.strip().lower() for d in v.split(",") if d.strip()]
-        if isinstance(v, list):
-            return [str(d).strip().lower() for d in v if str(d).strip()]
-        return ["campus.edu", "student.campus.edu"]
+    @property
+    def ALLOWED_EMAIL_DOMAINS(self) -> list[str]:
+        return [d.strip().lower() for d in self.ALLOWED_EMAIL_DOMAINS_RAW.split(",") if d.strip()]
 
     # Database
     POSTGRES_USER: str = "campus_user"
@@ -57,17 +55,16 @@ class Settings(BaseSettings):
     CLIP_MODEL_VERSION: str = "v1"
 
     # Security & CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:8080", "http://127.0.0.1:8080", "http://localhost:3000"]
-    SESSION_MAX_AGE_SECONDS: int = 604800  # 7 days
+    CORS_ORIGINS_RAW: str = Field(
+        default="http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000",
+        validation_alias="CORS_ORIGINS",
+    )
 
-    @field_validator("CORS_ORIGINS", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, v: object) -> list[str]:
-        if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
-        if isinstance(v, list):
-            return [str(o).strip() for o in v if str(o).strip()]
-        return ["http://localhost:8080", "http://127.0.0.1:8080"]
+    @property
+    def CORS_ORIGINS(self) -> list[str]:
+        return [o.strip() for o in self.CORS_ORIGINS_RAW.split(",") if o.strip()]
+
+    SESSION_MAX_AGE_SECONDS: int = 604800  # 7 days
 
 
 @lru_cache

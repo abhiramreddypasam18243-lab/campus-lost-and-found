@@ -13,6 +13,7 @@ if str(backend_dir) not in sys.path:
 
 from app.core.config import get_settings
 from app.core.database import Base
+import app.models  # noqa: F401
 
 config = context.config
 

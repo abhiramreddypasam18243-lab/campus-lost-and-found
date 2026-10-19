@@ -286,4 +286,33 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   2. *Why must open reports be closed and private details stripped when a user deletes their account, rather than cascading a hard delete of the report?*
   3. *What prevents a campus lost-and-found system from being left without an administrator when roles are changed via the admin API?*
 
+### Step 11: Analytics Dashboard (AC-105 to AC-108)
+* **What was built:**
+  * **Pure Domain Logic (`app/domain/analytics.py`):**
+    * Mathematical operational metrics (AC-105): $\text{recovery\_rate} = \frac{\text{returned}}{\text{returned} + \text{unclaimed\_expired}}$, rounded to 3 decimals (0.667 for 4 returned / 2 expired); $\text{unclaimed\_rate} = \frac{\text{unclaimed\_expired}}{\text{total\_created}}$, rounded to 3 decimals (0.2 for 2 expired / 10 created).
+    * Statistical median computation (`calculate_median_duration`): robust calculation over non-empty duration lists; returns `None` for zero samples.
+    * Mandatory synthetic disclaimer banner string (`SYNTHETIC_DATA_BANNER`, AC-108).
+  * **Schema & Aggregation Service (`app/schemas/analytics.py`, `app/services/analytics.py`):**
+    * `DashboardMetricsResponse` schema strictly forbidding extra fields and declaring metric rates, recovery medians, queue age medians, banner notice, and `is_synthetic_demo = True`.
+    * `get_dashboard_analytics` query pipeline: aggregates found reports, joins completed `handovers` via `claims` to extract verified recovery timestamps, computes queue ages for open items, and gracefully handles empty database states (AC-107).
+  * **API Router & Anti-Enumeration Security (`app/api/dashboard.py`):**
+    * `GET /api/dashboard`: exposes operational metrics exclusively to `moderator` and `admin` roles (AC-106).
+    * Anti-enumeration guard (`require_dashboard_staff`): returns HTTP 404 `not_found` for unauthenticated callers and regular campus users, preventing surface probing.
+  * **Automated Test Suite (`tests/test_ac_105_to_108_analytics.py`):**
+    * AC-105: 10 found reports fixture (4 returned, 2 unclaimed_expired, 4 open), asserting exact 0.667 recovery rate, 0.2 unclaimed rate, and median recovery duration.
+    * AC-106: Role-based access control and 404 anti-enumeration testing across anonymous, student, moderator, and admin users.
+    * AC-107: Clean zero/null handling on empty database states.
+    * AC-108: Verification of synthetic demonstration notice banner.
+* **Why it is designed that way:**
+  * **Metric Definition Integrity:** In lost-and-found lifecycle dynamics, items currently open in the active matching window have not yet reached an end state. Dividing returned items by total created would penalize recent intake surges. The recovery rate denominator strictly isolates resolved items ($\text{returned} + \text{unclaimed\_expired}$).
+  * **Anti-Enumeration Access Control:** System health and administrative activity indicators are sensitive operational surfaces. Returning 404 rather than 401 or 403 ensures that unauthorized users cannot deduce whether dashboard endpoints exist or probe API structure.
+  * **Academic Transparency via Synthetic Banners:** In student-submitted systems, demonstrations often run on pre-seeded mock items. Explicitly displaying a prominent notice prevents confusing UI mock numbers with scientifically proven real-world recovery effectiveness.
+* **One thing that could go wrong:**
+  * **Missing Handover Records on Legacy or Overridden Reports:** If an item's status is updated to `returned` by an administrative script without creating an associated `Handover` record, a strict inner join would drop the item from recovery time calculations. Handled by gracefully falling back to `item_report.updated_at` with a non-negative elapsed duration filter.
+* **Quiz Questions (for viva preparation):**
+  1. *Why does the operational recovery rate formula specifically use returned / (returned + unclaimed_expired) rather than dividing by all created reports?*
+  2. *How does the dashboard endpoint maintain anti-enumeration defense when accessed by non-moderator campus users?*
+  3. *Why must the operational metrics response include an explicit synthetic demonstration notice banner under research and evaluation standards?*
+
+
 

@@ -10,6 +10,7 @@ from app.api import (
     admin,
     auth,
     claims,
+    dashboard,
     found,
     handover,
     health,
@@ -102,3 +103,4 @@ app.include_router(claims.router)
 app.include_router(handover.router)
 app.include_router(moderation.router)
 app.include_router(admin.router)
+app.include_router(dashboard.router)

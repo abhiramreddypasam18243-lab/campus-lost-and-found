@@ -95,5 +95,32 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   2. *How does the PII scanner detect credit card numbers accurately using the Luhn algorithm, and why must the error response NEVER echo back the detected value?*
   3. *Why is `returned` modeled as a strictly irreversible terminal state in the found-item lifecycle finite state machine?*
 
+---
+
+## Step 5: Browsing, Search, and Whitelisted Public Views
+* **Acceptance Criteria:** AC-38 to AC-44
+* **What was built:**
+  * Whitelisted public found-item listing (`GET /api/found`) showing strictly `open` found items (excluding `pending_review`, `removed`, `returned`, `archived`, `closed`, and all lost reports) with building-level locations, public descriptions, category, dates, and public photo thumbnails.
+  * Strict Default-Deny Serializers (`PublicFoundItemSummary` and `PublicReportDetailResponse`) with `extra="forbid"`, verified by automated canary contract testing ensuring zero leakage of private details, verification prompts, reporter identities (ID/email/name), finer-than-building locations (room/floor), or private images.
+  * Role-based report detail routing (`GET /api/reports/{id}`): returns full staff report view (`FullStaffReportResponse`) to moderators, admins, and the report's owner; returns whitelisted public detail view to non-owner student users for open found reports; and returns HTTP 404 anti-enumeration on lost reports or non-open found reports accessed by other users.
+  * PostgreSQL full-text search across `title` and `description` via `to_tsvector` and `plainto_tsquery`, backed by an indexed GIN expression (`0005_search_index.py`).
+  * Hierarchical building filter resolving all descendant locations (floors, rooms, areas) via recursive Common Table Expression (CTE).
+  * Multi-attribute filtering combining full-text search, category, building descendants, and date ranges with `AND`.
+  * Stable cursor pagination encoding `(created_at, id)` as an opaque base64 string with configurable limit (default 20, max 100) guaranteeing no skipped or duplicated items across pages during real-time writes.
+  * Per-user browse rate limiting via `BrowseRateLimiter` allowing 120 requests/minute and returning HTTP 429 with standard `Retry-After` header when exceeded.
+  * Strict campus authentication (401 for anonymous) and UUIDv4 identifier enforcement across all browse endpoints.
+* **Why it is designed that way:**
+  * A default-deny serializer ensures that even if developers add new internal or sensitive columns to the database model in future steps, those columns will never accidentally leak to public API callers unless explicitly whitelisted in the response schema.
+  * Resolving locations to building-level for public viewers protects student safety by preventing stalkers or opportunistic claimants from learning the exact room or floor where an item was lost or found.
+  * Stable cursor pagination based on `(created_at, id)` avoids the offset pagination trap (e.g., `OFFSET 20`), where items inserted while a user is browsing cause page drift and duplicate or missing items.
+  * Opaque cursor strings prevent clients from relying on internal database sorting implementations, allowing future backend optimizations without breaking client contracts.
+* **One thing that could go wrong:**
+  * If a user passes dates with ambiguous timezone offsets or plain calendar dates `YYYY-MM-DD`, naive parsing can truncate queries at midnight `00:00:00`, excluding all items found during the daytime on the end date; explicitly expanding `date_to` to `23:59:59.999999 UTC` guarantees inclusive date window filtering.
+* **Quiz Questions (for viva preparation):**
+  1. *What is a "default-deny serializer", and how does contract testing with canary strings guarantee that sensitive student data cannot leak into public API responses?*
+  2. *Why is cursor-based pagination using a composite tuple `(created_at, id)` preferred over traditional `OFFSET`/`LIMIT` pagination in high-frequency lost-and-found databases?*
+  3. *How does the building filter use a recursive Common Table Expression (CTE) to include items located on lower hierarchical levels (such as specific rooms or floors) without exposing those finer locations to the public?*
+
+
 
 

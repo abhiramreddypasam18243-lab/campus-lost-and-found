@@ -8,6 +8,7 @@ from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.rate_limit import browse_rate_limiter
 from app.core.security import login_rate_limiter
 from app.main import app
 
@@ -32,6 +33,7 @@ TestAsyncSessionLocal = async_sessionmaker(
 async def clean_database_and_state() -> AsyncGenerator[None, None]:
     """Clean test tables and in-memory rate limit state before and after each test."""
     login_rate_limiter.attempts.clear()
+    browse_rate_limiter.reset()
     async with TestAsyncSessionLocal() as session:
         try:
             await session.execute(
@@ -46,6 +48,7 @@ async def clean_database_and_state() -> AsyncGenerator[None, None]:
 
     yield
     login_rate_limiter.attempts.clear()
+    browse_rate_limiter.reset()
 
 
 @pytest.fixture

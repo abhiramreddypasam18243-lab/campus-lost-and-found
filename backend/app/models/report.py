@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -70,6 +70,11 @@ class ItemReport(Base):
     __table_args__ = (
         Index("ix_item_reports_type_status", "type", "status"),
         Index("ix_item_reports_category", "category"),
+        Index(
+            "ix_item_reports_fts",
+            text("to_tsvector('english'::regconfig, (title::text || ' '::text) || description)"),
+            postgresql_using="gin",
+        ),
     )
 
 

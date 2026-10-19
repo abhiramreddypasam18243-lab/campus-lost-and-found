@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import require_authenticated_user, verify_csrf
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.rate_limit import browse_rate_limiter
 from app.domain.categories import is_sensitive_category
 from app.domain.image_hash import hamming_distance
 from app.domain.lifecycle import transition_found_report, transition_lost_report
@@ -16,6 +17,13 @@ from app.domain.time import compute_time_window
 from app.models.location import CampusLocation
 from app.models.report import ItemImage, ItemReport
 from app.models.user import User
+from app.schemas.found import (
+    FullStaffReportResponse,
+    LocationDetail,
+    PublicImageDetail,
+    PublicReportDetailResponse,
+    ReporterSummary,
+)
 from app.schemas.report import (
     CreateFoundReportRequest,
     CreateLostReportRequest,
@@ -23,6 +31,7 @@ from app.schemas.report import (
     ReportResponse,
 )
 from app.services.audit import write_audit_log
+from app.services.location import resolve_building_for_location
 from app.services.photo import process_and_save_photo
 
 settings = get_settings()
@@ -209,12 +218,24 @@ async def create_found_report(
     return _to_report_response(report, current_user)
 
 
-@router.get("/{report_id}", response_model=ReportResponse)
+@router.get(
+    "/{report_id}",
+    response_model=PublicReportDetailResponse | FullStaffReportResponse,
+)
 async def get_report(
     report_id: uuid.UUID,
     current_user: User = Depends(require_authenticated_user),
     db: AsyncSession = Depends(get_db),
-) -> ReportResponse:
+) -> PublicReportDetailResponse | FullStaffReportResponse:
+    # 1. AC-43 Browse rate limiting (120 req/min per user)
+    is_limited, retry_after = browse_rate_limiter.check_and_record(str(current_user.id))
+    if is_limited:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={"code": "rate_limited", "message": "Browse rate limit exceeded (120 req/min)"},
+            headers={"Retry-After": str(retry_after)},
+        )
+
     stmt = select(ItemReport).where(ItemReport.id == report_id)
     result = await db.execute(stmt)
     report = result.scalar_one_or_none()
@@ -234,13 +255,107 @@ async def get_report(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="report_not_found")
 
     # Load associated images
-    img_stmt = select(ItemImage).where(
-        ItemImage.report_id == report.id, ItemImage.deleted_at.is_(None)
+    img_stmt = (
+        select(ItemImage)
+        .where(ItemImage.report_id == report.id, ItemImage.deleted_at.is_(None))
+        .order_by(ItemImage.created_at.asc())
     )
-    images = (await db.execute(img_stmt)).scalars().all()
-    report.images = list(images)
+    images = list((await db.execute(img_stmt)).scalars().all())
 
-    return _to_report_response(report, current_user)
+    # AC-42: Staff and owners see full details
+    if is_owner or is_staff:
+        loc_stmt = select(CampusLocation).where(CampusLocation.id == report.location_id)
+        loc = (await db.execute(loc_stmt)).scalar_one_or_none()
+        location_detail = (
+            LocationDetail(
+                id=loc.id,
+                name=loc.name,
+                kind=loc.kind,
+                parent_id=loc.parent_id,
+                lat=float(loc.lat) if loc.lat is not None else None,
+                lng=float(loc.lng) if loc.lng is not None else None,
+            )
+            if loc
+            else None
+        )
+
+        rep_stmt = select(User).where(User.id == report.reporter_id)
+        rep = (await db.execute(rep_stmt)).scalar_one_or_none()
+        reporter_summary = (
+            ReporterSummary(
+                id=rep.id,
+                email=rep.email,
+                display_name=rep.display_name,
+            )
+            if rep
+            else None
+        )
+
+        staff_images = [
+            ImageResponse(
+                id=img.id,
+                storage_key=img.storage_key,
+                width=img.width,
+                height=img.height,
+                is_public=img.is_public,
+                dhash=img.dhash,
+                created_at=img.created_at,
+            )
+            for img in images
+        ]
+
+        return FullStaffReportResponse(
+            id=report.id,
+            type=report.type,
+            status=report.status,
+            title=report.title,
+            description=report.description,
+            category=report.category,
+            location_id=report.location_id,
+            location=location_detail,
+            reporter_id=report.reporter_id,
+            reporter=reporter_summary,
+            window_start=report.window_start,
+            window_end=report.window_end,
+            time_precision=report.time_precision,
+            private_details=report.private_details,
+            verification_prompts=report.verification_prompts,
+            images=staff_images,
+            disposition=report.disposition,
+            closed_at=report.closed_at,
+            reviewed_by=report.reviewed_by,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+        )
+
+    # AC-39: Normal students see only whitelisted public detail
+    bldg_id, bldg_name = await resolve_building_for_location(db, report.location_id)
+
+    public_images: list[PublicImageDetail] = []
+    if not is_sensitive_category(report.category):
+        for img in images:
+            if img.is_public:
+                public_images.append(
+                    PublicImageDetail(
+                        id=img.id,
+                        thumbnail_url=f"/api/images/{img.storage_key}",
+                        image_url=f"/api/images/{img.storage_key}",
+                    )
+                )
+
+    return PublicReportDetailResponse(
+        id=report.id,
+        type=report.type,
+        status=report.status,
+        title=report.title,
+        description=report.description,
+        category=report.category,
+        date=report.window_start.strftime("%Y-%m-%d"),
+        building=bldg_name,
+        building_id=bldg_id,
+        images=public_images,
+        created_at=report.created_at,
+    )
 
 
 @router.patch(

@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     # Campus Domain Whitelist (parsed from comma-separated string)
     ALLOWED_EMAIL_DOMAINS_RAW: str = Field(
-        default="campus.edu,student.campus.edu",
+        default="campus.edu,student.campus.edu,iisc.ac.in",
         validation_alias="ALLOWED_EMAIL_DOMAINS",
     )
 
@@ -72,3 +72,6 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+settings = get_settings()

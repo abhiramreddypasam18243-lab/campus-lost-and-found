@@ -107,6 +107,7 @@ async def seed_data(session: AsyncSession) -> None:
 
     # 3. Seed Users for each role
     users_to_seed = [
+        ("abhiramr@iisc.ac.in", "Abhiram@IISc2026!", "Abhiram R (IISc)", "admin"),
         ("admin@campus.edu", "CampusAdmin2026!", "Campus Administrator", "admin"),
         ("moderator@campus.edu", "CampusMod2026!", "Staff Moderator", "moderator"),
         ("student1@campus.edu", "StudentPass2026!", "Alice Student", "user"),

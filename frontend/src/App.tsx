@@ -1298,11 +1298,11 @@ export const App: React.FC = () => {
                     type="email"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="user@campus.edu"
+                    placeholder="abhiramr@iisc.ac.in"
                     required
                   />
                   <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                    Requires an authorized campus domain (@campus.edu or @student.campus.edu)
+                    Requires an authorized institutional domain (@iisc.ac.in, @campus.edu, or @student.campus.edu)
                   </small>
                 </div>
                 <div className="form-group">
@@ -1339,7 +1339,7 @@ export const App: React.FC = () => {
                   </button>
                 </div>
                 <div className="auth-note">
-                  💡 <strong>Campus accounts:</strong> <code>student1@campus.edu</code> (Student), <code>moderator@campus.edu</code> (Staff), <code>admin@campus.edu</code> (Admin).
+                  💡 <strong>Campus accounts:</strong> <code>abhiramr@iisc.ac.in</code> (Admin), <code>student1@campus.edu</code> (Student), <code>moderator@campus.edu</code> (Staff).
                 </div>
               </form>
             ) : (
@@ -1351,7 +1351,7 @@ export const App: React.FC = () => {
                     type="text"
                     value={registerName}
                     onChange={(e) => setRegisterName(e.target.value)}
-                    placeholder="Your Full Name"
+                    placeholder="Abhiram R"
                     required
                   />
                 </div>
@@ -1362,11 +1362,11 @@ export const App: React.FC = () => {
                     type="email"
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
-                    placeholder="your.name@campus.edu"
+                    placeholder="abhiramr@iisc.ac.in"
                     required
                   />
                   <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                    Must end with @campus.edu or @student.campus.edu
+                    Must end with @iisc.ac.in, @campus.edu or @student.campus.edu
                   </small>
                 </div>
                 <div className="form-group">

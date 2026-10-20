@@ -7,6 +7,8 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from fastapi import HTTPException, Request, status
 
+from app.core.config import settings
+
 ph = PasswordHasher(
     time_cost=2,
     memory_cost=65536,
@@ -107,9 +109,9 @@ def check_tls_requirement(request: Request) -> None:
         scheme = request.url.scheme
         forwarded_proto = request.headers.get("X-Forwarded-Proto")
 
-        # Untrusted clients cannot forge forwarded headers
+        is_proxy = client_host in ("127.0.0.1", "nginx", "frontend") or client_host.startswith("172.")
         is_secure = scheme == "https" or (
-            forwarded_proto == "https" and client_host in ("127.0.0.1", "nginx")
+            is_proxy and (forwarded_proto == "https" or settings.ENVIRONMENT == "development")
         )
 
         if not is_secure:

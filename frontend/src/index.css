@@ -488,6 +488,70 @@ body {
   font-size: 0.8rem;
 }
 
+.nav-button-auth {
+  margin-left: auto;
+  background: rgba(59, 130, 246, 0.15) !important;
+  border: 1px solid var(--accent-blue) !important;
+  color: #93c5fd !important;
+  font-weight: 700;
+}
+
+.nav-button-auth:hover {
+  background: rgba(59, 130, 246, 0.3) !important;
+  color: #fff !important;
+  box-shadow: var(--glow-blue);
+}
+
+.guest-welcome-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1.25rem;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.guest-welcome-banner:hover {
+  border-color: var(--accent-blue);
+  box-shadow: var(--glow-blue);
+  transform: translateY(-1px);
+}
+
+.guest-welcome-text {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.guest-welcome-icon {
+  font-size: 1.5rem;
+}
+
+.guest-welcome-sub {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+.active-user-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  color: #a7f3d0;
+}
+
 /* Modal Styling */
 .modal-backdrop {
   position: fixed;

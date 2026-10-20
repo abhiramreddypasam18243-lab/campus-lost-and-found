@@ -353,6 +353,44 @@ export const App: React.FC = () => {
         </p>
       </header>
 
+      {/* Prominent Authentication Banner */}
+      {!currentUser ? (
+        <div
+          className="guest-welcome-banner"
+          onClick={() => setShowLoginModal(true)}
+          role="region"
+          aria-label="Sign in banner"
+        >
+          <div className="guest-welcome-text">
+            <span className="guest-welcome-icon" aria-hidden="true">🔑</span>
+            <div>
+              <strong>Currently Browsing as Guest:</strong> Sign in with one-click demo accounts (Student, Staff Moderator, or Admin).
+              <span className="guest-welcome-sub">Unlock item reporting, claim reviews, handover verification, and real-time dashboard.</span>
+            </div>
+          </div>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowLoginModal(true)
+            }}
+            id="banner-signin-btn"
+          >
+            Sign In / Switch Role →
+          </button>
+        </div>
+      ) : (
+        <div className="active-user-banner">
+          <div>
+            👋 Welcome, <strong>{currentUser.email}</strong> &nbsp;
+            <span className="user-role-tag">{currentUser.role}</span>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={handleLogout}>
+            Sign Out
+          </button>
+        </div>
+      )}
+
       {/* Navigation Tabs (AC-125: accessible keyboard navigation) */}
       <nav className="nav-bar" role="tablist" aria-label="Main Navigation">
         <button
@@ -415,6 +453,26 @@ export const App: React.FC = () => {
         >
           📊 Operational Analytics
         </button>
+
+        {/* Dedicated Auth Button in Navbar */}
+        {currentUser ? (
+          <button
+            className="nav-button nav-button-auth"
+            onClick={handleLogout}
+            title="Click to sign out"
+            id="nav-user-signout"
+          >
+            👤 {currentUser.email.split('@')[0]} [Sign Out]
+          </button>
+        ) : (
+          <button
+            className="nav-button nav-button-auth"
+            onClick={() => setShowLoginModal(true)}
+            id="nav-signin-btn"
+          >
+            🔑 Sign In / Roles
+          </button>
+        )}
       </nav>
 
       {/* 1. BROWSE PANEL */}

@@ -8,8 +8,8 @@ This guide explains how to deploy and access the **Smart Campus Lost-and-Found N
 
 Your local Compose stack has been tunneled via Cloudflare Tunnel to provide an immediate, secure public HTTPS URL:
 
-* **Live Public URL:** [`https://teachers-occurrence-refused-achieved.trycloudflare.com`](https://teachers-occurrence-refused-achieved.trycloudflare.com)
-* **API Health Check:** [`https://teachers-occurrence-refused-achieved.trycloudflare.com/api/health`](https://teachers-occurrence-refused-achieved.trycloudflare.com/api/health)
+* **Live Public URL:** [`https://capable-telling-accordance-href.trycloudflare.com`](https://capable-telling-accordance-href.trycloudflare.com)
+* **API Health Check:** [`https://capable-telling-accordance-href.trycloudflare.com/api/health`](https://capable-telling-accordance-href.trycloudflare.com/api/health)
 
 ### Running or Restarting the Tunnel
 To regenerate or restart the tunnel at any time:

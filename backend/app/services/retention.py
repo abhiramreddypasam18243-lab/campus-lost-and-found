@@ -78,7 +78,7 @@ async def record_report_disposition(
     valid_dispositions = ("donated", "disposed", "kept")
     if disposition not in valid_dispositions:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="invalid_disposition",
         )
 

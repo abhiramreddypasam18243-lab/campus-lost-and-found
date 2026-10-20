@@ -32,7 +32,7 @@ async def change_user_role(
     valid_roles = ("user", "moderator", "admin")
     if new_role not in valid_roles:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="invalid_role",
         )
 

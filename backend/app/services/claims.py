@@ -115,7 +115,7 @@ async def create_claim(
     ok, err = validate_verification_answers(prompts, payload.answers)
     if not ok:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=err or "missing_verification_answers",
         )
 
@@ -357,7 +357,7 @@ async def decide_claim(
 
     if len(decision_note.strip()) < 10:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="decision_note_too_short",
         )
 

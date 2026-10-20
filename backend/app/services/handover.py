@@ -130,7 +130,7 @@ async def reissue_handover(
 
     if len(reason.strip()) < 10:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="reissue_reason_too_short",
         )
 
@@ -265,7 +265,7 @@ async def verify_and_complete_handover(
     # AC-93: Identity check note required (at least 10 chars)
     if len(identity_note.strip()) < 10:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="identity_note_too_short",
         )
 

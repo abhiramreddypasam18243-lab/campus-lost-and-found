@@ -419,8 +419,8 @@ export const PrivacyRedactionStudio: React.FC<PrivacyRedactionStudioProps> = ({
       const b1 = textBoxes[i]
       if (usedText.has(b1.id)) continue
 
-      let curX = b1.x
-      let curY = b1.y
+      const curX = b1.x
+      const curY = b1.y
       let curW = b1.width
       let curH = b1.height
       usedText.add(b1.id)

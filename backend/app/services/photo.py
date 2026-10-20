@@ -64,7 +64,7 @@ def validate_image_file(content: bytes) -> tuple[str, str]:
             w, h = img.size
             if w > MAX_DIMENSION or h > MAX_DIMENSION:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail={
                         "code": "image_too_large",
                         "message": f"Image dimensions {w}x{h} exceed 6,000x6,000 maximum.",

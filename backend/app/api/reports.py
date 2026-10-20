@@ -103,7 +103,7 @@ async def create_lost_report(
         detected_kind = scan_pii(field_val)
         if detected_kind is not None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={"code": "pii_detected", "kind": detected_kind, "field": field_name},
             )
 
@@ -169,7 +169,7 @@ async def create_found_report(
         detected_kind = scan_pii(field_val)
         if detected_kind is not None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={"code": "pii_detected", "kind": detected_kind, "field": field_name},
             )
 
@@ -446,7 +446,7 @@ async def upload_report_image(
     current_count = (await db.execute(count_stmt)).scalar() or 0
     if current_count >= 3:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "max_images_exceeded",
                 "message": "At most 3 images are allowed per report.",

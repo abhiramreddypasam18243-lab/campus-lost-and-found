@@ -106,7 +106,7 @@ async def list_found_items(
             )
         except Exception as exc:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="invalid_cursor",
             ) from exc
 

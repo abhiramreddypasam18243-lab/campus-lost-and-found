@@ -368,6 +368,41 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   2. *Why must the physical handover desk interface strictly display verification success/failure rather than rendering the expected handover code?*
   3. *How does the architectural AST check verify that the domain layer maintains pure separation of concerns without database or framework coupling?*
 
+---
+
+## Step 14: Production Deployment, Seed Data & CI Demo Journey (AC-138 to AC-149)
+
+* **What was built:**
+  * **Database Seed Engine (`backend/app/seed.py`, AC-145):**
+    * Seed command populates hierarchical campus tree (Campus -> Building -> Floor -> Room/Area), building adjacency relations (`LocationAdjacency`), active text & image models in `ModelRegistry`, and seeded demo accounts for all 4 roles (`admin@campus.edu`, `moderator@campus.edu`, `student1@campus.edu`, `student2@campus.edu`) along with synthetic demo reports.
+    * Completely idempotent execution guarded by pre-existence queries.
+  * **End-to-End Demo Journey CI Test (`backend/tests/test_ac_146_demo_journey.py`, AC-146):**
+    * Full integration test executing the complete 8-stage campus journey:
+      1. Student A reports lost item with photo (`POST /api/reports/lost`, `POST /api/reports/{id}/images`).
+      2. Student B reports found item in different words (`POST /api/reports/found`).
+      3. Staff moderator approves found report into public listings (`POST /api/mod/reports/{id}/approve`).
+      4. Student A searches keyword index (`GET /api/found?q=...`).
+      5. Student A retrieves ranked multimodal match suggestions with additive plain-language explanation (`GET /api/reports/{id}/matches`) with zero canary string leakage.
+      6. Student A submits claim with evidence (`POST /api/claims`).
+      7. Moderator acquires claim lock and approves claim (`POST /api/mod/claims/{id}/open`, `approve`).
+      8. Single-use 8-character Crockford Base32 handover code is issued; Moderator completes handover at desk with identity note (`POST /api/mod/handovers/{claim_id}/verify`).
+      9. Moderator reviews operational dashboard (`GET /api/dashboard`) confirming updated recovery metrics.
+  * **Documentation & Compliance Package (AC-148, AC-149):**
+    * Data and Model Licences: [`docs/DATA_LICENCES.md`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/docs/DATA_LICENCES.md) documenting Apache 2.0 and MIT licences for text/vision weights, CC0 for synthetic data, and CC-BY 4.0 for consented photo subsets.
+    * Traceability Matrix: [`docs/test-plan.md`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/docs/test-plan.md) mapping all 149 acceptance criteria (**AC-01** to **AC-149**) to automated test suites or verification checks.
+    * Comprehensive Documentation: [`README.md`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/README.md) recording setup instructions, compose commands, demo scripts, multi-device LAN testing (AC-142, AC-143), and explicit limitations (advisory AI, synthetic benchmarks, SMTP deliverability, no SSO, 14/90/180-day retention policies).
+* **Why it is designed that way:**
+  * **Automated Full-Lifecycle Verification in CI:** Unit tests verify isolated modules, but end-to-end demo testing guarantees that database migrations, session authentication, cross-role authorization, file storage, full-text search, pgvector similarity scoring, cryptographic handovers, and dashboard analytics operate cohesively without breaking contract boundaries.
+  * **Idempotent Seeding:** Campus administrators and demo presenters frequently re-run initialization scripts. Ensuring idempotency prevents constraint violations and ensures local environments can reset cleanly at any time.
+  * **Honest Research Boundaries & Advisory AI:** To ensure safety in real university deployments, the documentation and architecture strictly enforce that AI scores are advisory hints. Handover codes and claim approvals remain entirely in human moderator control.
+* **One thing that could go wrong:**
+  * **Network Egress Leakage during Model Warmup:** If pretrained embedding models were initialized using default remote HuggingFace download routines, container startup would fail in air-gapped or network-restricted production environments. Mitigated by pre-baking model checkpoints and using fallback stand-ins when offline.
+* **Quiz Questions (for viva preparation):**
+  1. *How does the end-to-end CI test verify that AI matching suggestions remain strictly advisory throughout the report-to-handover lifecycle?*
+  2. *Why is it critical that the database seed script is idempotent and marks all preloaded campus accounts and reports explicitly as synthetic?*
+  3. *What mechanisms ensure that the production Docker containers operate securely without requiring outbound internet access during embedding and matching?*
+
+
 
 
 

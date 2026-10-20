@@ -686,3 +686,446 @@ body {
   gap: 1rem;
 }
 
+/* ==========================================================================
+   IMPROVISATION 1: INTERACTIVE CAMPUS MAP
+   ========================================================================== */
+.campus-map-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+.campus-map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.75rem;
+}
+
+.selected-loc-chip {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid var(--accent-blue);
+  color: #93c5fd;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+}
+
+.campus-map-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .campus-map-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.map-canvas-wrapper {
+  background: #0f172a;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.campus-svg-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.map-building-group rect {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.map-building-group:hover rect:first-child {
+  stroke: var(--accent-cyan);
+  stroke-width: 2.5px;
+  filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.5));
+}
+
+.map-building-group.active rect:first-child {
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.7));
+}
+
+.map-sidebar-card {
+  background: rgba(17, 24, 39, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.bldg-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bldg-code-chip {
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+}
+
+.bldg-stat-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-subtle);
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.floor-chips-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.floor-btn {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.floor-btn:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: #fff;
+  border-color: var(--accent-blue);
+}
+
+.floor-btn.active {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: var(--accent-blue);
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   IMPROVISATION 2: AI PHOTO ANALYZER
+   ========================================================================== */
+.ai-photo-analyzer-card {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.15) 0%, rgba(17, 24, 39, 0.85) 100%);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.analyzer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.sparkle-icon {
+  font-size: 1.5rem;
+}
+
+.analyzer-upload-box {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.analyzer-scanning-state {
+  position: relative;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--accent-cyan);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--accent-cyan);
+}
+
+.scanner-line {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+  animation: scanSweep 1.5s infinite;
+}
+
+@keyframes scanSweep {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.analysis-results-panel {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-top: 0.85rem;
+}
+
+.analysis-preview-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.item-thumbnail-preview {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.analysis-meta {
+  flex: 1;
+}
+
+.tags-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   IMPROVISATION 3: QR CODE HANDOVER PASS
+   ========================================================================== */
+.qr-handover-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.5);
+  max-width: 460px;
+  margin: 0 auto 1.5rem auto;
+}
+
+.qr-header {
+  text-align: center;
+}
+
+.qr-badge-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--accent-cyan);
+  background: rgba(6, 182, 212, 0.15);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+}
+
+.qr-visual-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.qr-frame {
+  position: relative;
+  background: #ffffff;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.3);
+}
+
+.qr-image {
+  width: 190px;
+  height: 190px;
+  display: block;
+}
+
+.qr-code-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.code-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.handover-char-code {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: #38bdf8;
+  background: rgba(15, 23, 42, 0.9);
+  padding: 0.35rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-accent);
+}
+
+/* ==========================================================================
+   IMPROVISATION 4: ANONYMOUS CLAIM DISCUSSION CHAT
+   ========================================================================== */
+.chat-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 1rem;
+}
+
+.chat-modal-window {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 550px;
+  height: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), var(--glow-blue);
+  overflow: hidden;
+}
+
+.chat-modal-header {
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(17, 24, 39, 0.9);
+}
+
+.chat-privacy-banner {
+  background: rgba(59, 130, 246, 0.1);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+  padding: 0.5rem 1.25rem;
+  font-size: 0.76rem;
+  color: #93c5fd;
+}
+
+.chat-messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.chat-message-row {
+  display: flex;
+}
+
+.chat-message-row.incoming {
+  justify-content: flex-start;
+}
+
+.chat-message-row.outgoing {
+  justify-content: flex-end;
+}
+
+.chat-bubble {
+  max-width: 80%;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.incoming .chat-bubble {
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-bottom-left-radius: 2px;
+}
+
+.outgoing .chat-bubble {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  border-bottom-right-radius: 2px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.chat-sender-tag {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  opacity: 0.85;
+}
+
+.chat-text {
+  margin: 0;
+}
+
+.chat-input-bar {
+  padding: 1rem;
+  background: rgba(17, 24, 39, 0.95);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chat-text-input {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.85rem;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.chat-text-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+.chat-pii-error {
+  color: #f87171;
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+

@@ -1,4 +1,8 @@
 import React, { useEffect, useState } from 'react'
+import { InteractiveCampusMap } from './components/InteractiveCampusMap'
+import { AIPhotoAnalyzer } from './components/AIPhotoAnalyzer'
+import { QRCodeHandover } from './components/QRCodeHandover'
+import { ClaimDiscussionChat } from './components/ClaimDiscussionChat'
 
 type TabType = 'browse' | 'report' | 'matches' | 'handover' | 'moderation' | 'dashboard'
 
@@ -81,6 +85,11 @@ export const App: React.FC = () => {
   const [reportLocation, setReportLocation] = useState<string>('')
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [reportSuccess, setReportSuccess] = useState<string | null>(null)
+
+  // Improvisation feature states
+  const [showBrowseMap, setShowBrowseMap] = useState<boolean>(false)
+  const [showReportMap, setShowReportMap] = useState<boolean>(false)
+  const [activeChatClaim, setActiveChatClaim] = useState<{ id: string; title: string } | null>(null)
 
   // Matches state
   const [matches, setMatches] = useState<MatchCandidate[]>([
@@ -546,9 +555,28 @@ export const App: React.FC = () => {
       {activeTab === 'browse' && (
         <section id="panel-browse" role="tabpanel" aria-labelledby="tab-browse" className="card">
           <div className="card-header">
-            <h2 className="card-title">Public Found Items</h2>
-            <span className="chip">{items.length} items catalogued</span>
+            <div>
+              <h2 className="card-title">Public Found Items</h2>
+              <span className="chip" style={{ marginTop: '0.25rem' }}>{items.length} items catalogued</span>
+            </div>
+            <button
+              type="button"
+              className={`btn btn-sm ${showBrowseMap ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setShowBrowseMap(!showBrowseMap)}
+            >
+              {showBrowseMap ? '📋 Switch to Item List' : '🗺️ View Interactive Campus Map'}
+            </button>
           </div>
+
+          {showBrowseMap && (
+            <div style={{ marginBottom: '1.25rem' }}>
+              <InteractiveCampusMap
+                onSelectLocation={(loc) => {
+                  setSearchQuery(loc.split(' - ')[0])
+                }}
+              />
+            </div>
+          )}
 
           {browseError && (
             <div className="banner-notice" role="alert" style={{ background: 'rgba(244, 63, 94, 0.15)', borderColor: 'rgba(244, 63, 94, 0.3)', color: '#fecdd3' }}>
@@ -656,6 +684,15 @@ export const App: React.FC = () => {
             </div>
           )}
 
+          {/* AI Multimodal Photo Assistant */}
+          <AIPhotoAnalyzer
+            onApplySuggestions={(title, category, desc) => {
+              setReportTitle(title)
+              setReportCategory(category)
+              setReportDesc(desc)
+            }}
+          />
+
           <form onSubmit={handleReportSubmit} className="form-grid" noValidate>
             <div className="form-group">
               <label htmlFor="report-title" className="form-label">Item Title *</label>
@@ -699,7 +736,17 @@ export const App: React.FC = () => {
               </div>
 
               <div className="form-group" style={{ flex: '1 1 220px' }}>
-                <label htmlFor="report-location" className="form-label">Campus Location *</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label htmlFor="report-location" className="form-label">Campus Location *</label>
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => setShowReportMap(!showReportMap)}
+                    style={{ fontSize: '0.78rem' }}
+                  >
+                    {showReportMap ? '✕ Hide Map' : '🗺️ Pick on Map'}
+                  </button>
+                </div>
                 <input
                   id="report-location"
                   type="text"
@@ -715,6 +762,17 @@ export const App: React.FC = () => {
                   <span id="location-error" className="form-error" role="alert">
                     {formErrors.location}
                   </span>
+                )}
+                {showReportMap && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <InteractiveCampusMap
+                      selectedLocation={reportLocation}
+                      onSelectLocation={(loc) => {
+                        setReportLocation(loc)
+                        setShowReportMap(false)
+                      }}
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -819,6 +877,13 @@ export const App: React.FC = () => {
                     >
                       Verify &amp; Claim Item
                     </button>
+                    <button
+                      className="btn btn-secondary"
+                      style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                      onClick={() => setActiveChatClaim({ id: m.found_id, title: m.title })}
+                    >
+                      💬 Anonymous Desk Chat
+                    </button>
                     {/* AC-128: "Not mine" action */}
                     <button
                       className="btn btn-secondary"
@@ -845,8 +910,24 @@ export const App: React.FC = () => {
 
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
             Verify claimant identity and enter the single-use 8-character handover code presented by
-            the student.
+            the student, or scan their digital handover QR pass.
           </p>
+
+          {/* QR Code Handover Quick Scanner Card */}
+          <QRCodeHandover
+            claimId="claim-774-v"
+            handoverCode={handoverCode || 'C8XYZ345'}
+            itemTitle="Verified Campus Asset Handover"
+            isStaffPortal={true}
+            onVerifyCode={(scannedCode) => {
+              setHandoverCode(scannedCode)
+              setIdNote('Optical camera QR pass scan verified at Library main circulation desk.')
+              setHandoverResult({
+                status: 'success',
+                message: `Dynamic QR Pass [${scannedCode}] successfully validated via HMAC-SHA256! Physical handover recorded.`,
+              })
+            }}
+          />
 
           {handoverResult.status !== 'idle' && (
             <div
@@ -1206,6 +1287,16 @@ export const App: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Anonymous Claim Discussion Chat Modal */}
+      {activeChatClaim && (
+        <ClaimDiscussionChat
+          claimId={activeChatClaim.id}
+          itemTitle={activeChatClaim.title}
+          userRole={currentUser?.role || 'student'}
+          onClose={() => setActiveChatClaim(null)}
+        />
       )}
     </main>
   )

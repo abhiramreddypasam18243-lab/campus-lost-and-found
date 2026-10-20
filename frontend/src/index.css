@@ -609,60 +609,75 @@ body {
   line-height: 1.4;
 }
 
-.demo-accounts-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+.auth-modal-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.5rem;
 }
 
-.demo-role-btn {
-  background: rgba(17, 24, 39, 0.9);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 0.75rem;
-  color: var(--text-primary);
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.auth-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
   cursor: pointer;
+  border-radius: var(--radius-sm);
   transition: var(--transition-fast);
 }
 
-.demo-role-btn:hover {
-  border-color: var(--accent-blue);
-  background: rgba(59, 130, 246, 0.1);
-  transform: translateY(-1px);
+.auth-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.demo-role-btn strong {
+.auth-tab-btn.active {
+  color: #fff;
+  background: var(--accent-blue);
+  box-shadow: var(--glow-blue);
+}
+
+.auth-switch-prompt {
+  margin-top: 0.75rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #60a5fa;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
   font-size: 0.85rem;
 }
 
-.demo-role-btn small {
-  font-size: 0.75rem;
+.link-btn:hover {
+  color: #93c5fd;
+}
+
+.auth-note {
+  font-size: 0.8rem;
   color: var(--text-muted);
+  background: rgba(17, 24, 39, 0.6);
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  margin-top: 0.5rem;
+}
+
+.auth-note code {
+  color: var(--accent-cyan);
+  background: rgba(6, 182, 212, 0.1);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
   font-family: var(--font-mono);
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  margin: 0.25rem 0;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.divider span {
-  padding: 0 0.75rem;
 }
 
 .login-form {

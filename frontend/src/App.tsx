@@ -51,10 +51,20 @@ export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null)
   const [csrfToken, setCsrfToken] = useState<string | null>(null)
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false)
+  const [authMode, setAuthMode] = useState<'signin' | 'register'>('signin')
   const [loginEmail, setLoginEmail] = useState<string>('')
   const [loginPassword, setLoginPassword] = useState<string>('')
   const [loginLoading, setLoginLoading] = useState<boolean>(false)
   const [loginError, setLoginError] = useState<string | null>(null)
+
+  // Registration state
+  const [registerName, setRegisterName] = useState<string>('')
+  const [registerEmail, setRegisterEmail] = useState<string>('')
+  const [registerPassword, setRegisterPassword] = useState<string>('')
+  const [registerConfirmPassword, setRegisterConfirmPassword] = useState<string>('')
+  const [registerLoading, setRegisterLoading] = useState<boolean>(false)
+  const [registerError, setRegisterError] = useState<string | null>(null)
+  const [registerSuccess, setRegisterSuccess] = useState<string | null>(null)
 
   // Browse state
   const [items, setItems] = useState<FoundItem[]>([])
@@ -240,13 +250,60 @@ export const App: React.FC = () => {
     setCsrfToken(null)
   }
 
-  const handleQuickLogin = (email: string, pass: string) => {
-    handleLogin(email, pass)
-  }
-
   const handleManualLogin = (e: React.FormEvent) => {
     e.preventDefault()
     handleLogin(loginEmail, loginPassword)
+  }
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setRegisterError(null)
+    setRegisterSuccess(null)
+
+    if (registerPassword !== registerConfirmPassword) {
+      setRegisterError('Passwords do not match.')
+      return
+    }
+
+    if (registerPassword.length < 8) {
+      setRegisterError('Password must be at least 8 characters.')
+      return
+    }
+
+    setRegisterLoading(true)
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          display_name: registerName.trim(),
+          email: registerEmail.trim(),
+          password: registerPassword,
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        const msg = err.detail?.message || err.detail || 'Registration failed.'
+        throw new Error(msg)
+      }
+
+      setRegisterSuccess('Account created successfully! Switching to sign in...')
+      setLoginEmail(registerEmail)
+      setLoginPassword(registerPassword)
+      setRegisterName('')
+      setRegisterEmail('')
+      setRegisterPassword('')
+      setRegisterConfirmPassword('')
+      setTimeout(() => {
+        setAuthMode('signin')
+        setRegisterSuccess(null)
+      }, 1500)
+    } catch (e: unknown) {
+      setRegisterError(e instanceof Error ? e.message : 'Registration failed.')
+    } finally {
+      setRegisterLoading(false)
+    }
   }
 
   const handleReportSubmit = (e: React.FormEvent) => {
@@ -336,7 +393,7 @@ export const App: React.FC = () => {
             onClick={() => setShowLoginModal(true)}
             id="open-signin-modal"
           >
-            🔑 Sign In / Demo Accounts
+            🔑 Sign In / Register
           </button>
         )}
       </div>
@@ -364,8 +421,8 @@ export const App: React.FC = () => {
           <div className="guest-welcome-text">
             <span className="guest-welcome-icon" aria-hidden="true">🔑</span>
             <div>
-              <strong>Currently Browsing as Guest:</strong> Sign in with one-click demo accounts (Student, Staff Moderator, or Admin).
-              <span className="guest-welcome-sub">Unlock item reporting, claim reviews, handover verification, and real-time dashboard.</span>
+              <strong>Currently Browsing as Guest:</strong> Sign in to your campus account or create a new one.
+              <span className="guest-welcome-sub">Unlock item reporting, claim submissions, handover verification, and real-time dashboard.</span>
             </div>
           </div>
           <button
@@ -376,7 +433,7 @@ export const App: React.FC = () => {
             }}
             id="banner-signin-btn"
           >
-            Sign In / Switch Role →
+            Sign In / Register →
           </button>
         </div>
       ) : (
@@ -470,7 +527,7 @@ export const App: React.FC = () => {
             onClick={() => setShowLoginModal(true)}
             id="nav-signin-btn"
           >
-            🔑 Sign In / Roles
+            🔑 Sign In / Register
           </button>
         )}
       </nav>
@@ -964,12 +1021,12 @@ export const App: React.FC = () => {
         </section>
       )}
 
-      {/* Sign-in / Demo Login Modal */}
+      {/* Sign-in / Registration Modal */}
       {showLoginModal && (
         <div className="modal-backdrop" onClick={() => setShowLoginModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Sign In to Campus Network</h2>
+              <h2>{authMode === 'signin' ? 'Sign In to Campus Network' : 'Create Campus Account'}</h2>
               <button
                 className="modal-close"
                 onClick={() => setShowLoginModal(false)}
@@ -978,82 +1035,163 @@ export const App: React.FC = () => {
                 ✕
               </button>
             </div>
-            <p className="modal-subtitle">
-              Select a pre-configured demo account to explore roles, or log in with your campus email (@campus.edu).
-            </p>
 
-            <div className="demo-accounts-grid">
+            {/* Auth Mode Toggle Tabs */}
+            <div className="auth-modal-tabs">
               <button
                 type="button"
-                className="demo-role-btn"
-                onClick={() => handleQuickLogin('student1@campus.edu', 'StudentPass2026!')}
+                className={`auth-tab-btn ${authMode === 'signin' ? 'active' : ''}`}
+                onClick={() => {
+                  setAuthMode('signin')
+                  setLoginError(null)
+                }}
               >
-                🎓 <strong>Alice (Student)</strong>
-                <small>student1@campus.edu</small>
+                Sign In
               </button>
               <button
                 type="button"
-                className="demo-role-btn"
-                onClick={() => handleQuickLogin('student2@campus.edu', 'StudentPass2026!')}
+                className={`auth-tab-btn ${authMode === 'register' ? 'active' : ''}`}
+                onClick={() => {
+                  setAuthMode('register')
+                  setRegisterError(null)
+                  setRegisterSuccess(null)
+                }}
               >
-                🔍 <strong>Bob (Student)</strong>
-                <small>student2@campus.edu</small>
-              </button>
-              <button
-                type="button"
-                className="demo-role-btn"
-                onClick={() => handleQuickLogin('moderator@campus.edu', 'CampusMod2026!')}
-              >
-                🛡️ <strong>Staff Moderator</strong>
-                <small>moderator@campus.edu</small>
-              </button>
-              <button
-                type="button"
-                className="demo-role-btn"
-                onClick={() => handleQuickLogin('admin@campus.edu', 'CampusAdmin2026!')}
-              >
-                ⚙️ <strong>Campus Admin</strong>
-                <small>admin@campus.edu</small>
+                Register Account
               </button>
             </div>
 
-            <div className="divider">
-              <span>OR ENTER CREDENTIALS</span>
-            </div>
-
-            <form onSubmit={handleManualLogin} className="login-form">
-              <div className="form-group">
-                <label htmlFor="login-email">Campus Email</label>
-                <input
-                  id="login-email"
-                  type="email"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="e.g. alice@campus.edu"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="login-password">Password</label>
-                <input
-                  id="login-password"
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-              {loginError && <p className="form-error">{loginError}</p>}
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={loginLoading}
-                style={{ width: '100%', marginTop: '0.5rem' }}
-              >
-                {loginLoading ? 'Authenticating...' : 'Sign In'}
-              </button>
-            </form>
+            {authMode === 'signin' ? (
+              <form onSubmit={handleManualLogin} className="login-form">
+                <div className="form-group">
+                  <label htmlFor="login-email">Campus Email Address</label>
+                  <input
+                    id="login-email"
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="user@campus.edu"
+                    required
+                  />
+                  <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                    Requires an authorized campus domain (@campus.edu or @student.campus.edu)
+                  </small>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="login-password">Password</label>
+                  <input
+                    id="login-password"
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+                {loginError && <p className="form-error">{loginError}</p>}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loginLoading}
+                  style={{ width: '100%', marginTop: '0.5rem' }}
+                >
+                  {loginLoading ? 'Authenticating...' : 'Sign In'}
+                </button>
+                <div className="auth-switch-prompt">
+                  Don't have an account yet?{' '}
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => {
+                      setAuthMode('register')
+                      setLoginError(null)
+                    }}
+                  >
+                    Register here
+                  </button>
+                </div>
+                <div className="auth-note">
+                  💡 <strong>Campus accounts:</strong> <code>student1@campus.edu</code> (Student), <code>moderator@campus.edu</code> (Staff), <code>admin@campus.edu</code> (Admin).
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleRegister} className="login-form">
+                <div className="form-group">
+                  <label htmlFor="register-name">Full Name</label>
+                  <input
+                    id="register-name"
+                    type="text"
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                    placeholder="Your Full Name"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="register-email">Campus Email</label>
+                  <input
+                    id="register-email"
+                    type="email"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                    placeholder="your.name@campus.edu"
+                    required
+                  />
+                  <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                    Must end with @campus.edu or @student.campus.edu
+                  </small>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="register-password">Password</label>
+                  <input
+                    id="register-password"
+                    type="password"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    placeholder="Minimum 8 characters"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="register-confirm-password">Confirm Password</label>
+                  <input
+                    id="register-confirm-password"
+                    type="password"
+                    value={registerConfirmPassword}
+                    onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    required
+                  />
+                </div>
+                {registerError && <p className="form-error">{registerError}</p>}
+                {registerSuccess && (
+                  <p className="form-success" style={{ color: '#34d399', fontSize: '0.85rem' }}>
+                    ✓ {registerSuccess}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={registerLoading}
+                  style={{ width: '100%', marginTop: '0.5rem' }}
+                >
+                  {registerLoading ? 'Creating Account...' : 'Create Account'}
+                </button>
+                <div className="auth-switch-prompt">
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => {
+                      setAuthMode('signin')
+                      setRegisterError(null)
+                    }}
+                  >
+                    Sign in here
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

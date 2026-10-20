@@ -76,9 +76,9 @@ export const App: React.FC = () => {
   // Report form state
   const [reportType, setReportType] = useState<'lost' | 'found'>('lost')
   const [reportTitle, setReportTitle] = useState<string>('')
-  const [reportCategory, setReportCategory] = useState<string>('bottle')
+  const [reportCategory, setReportCategory] = useState<string>('')
   const [reportDesc, setReportDesc] = useState<string>('')
-  const [reportLocation, setReportLocation] = useState<string>('Library - Floor 1')
+  const [reportLocation, setReportLocation] = useState<string>('')
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [reportSuccess, setReportSuccess] = useState<string | null>(null)
 
@@ -315,6 +315,14 @@ export const App: React.FC = () => {
       errors.title = 'Title must be at least 5 characters'
     }
 
+    if (!reportCategory.trim()) {
+      errors.category = 'Item category is required'
+    }
+
+    if (!reportLocation.trim()) {
+      errors.location = 'Campus location is required'
+    }
+
     if (!reportDesc.trim()) {
       errors.desc = 'Description is required'
     } else if (reportDesc.length < 10) {
@@ -335,6 +343,8 @@ export const App: React.FC = () => {
     setFormErrors({})
     setReportSuccess(`Successfully registered ${reportType} report: "${reportTitle}". AI matching enqueued.`)
     setReportTitle('')
+    setReportCategory('')
+    setReportLocation('')
     setReportDesc('')
   }
 
@@ -558,19 +568,15 @@ export const App: React.FC = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search found items"
               />
-              <select
-                className="form-select"
-                style={{ flex: '0 1 180px' }}
+              <input
+                type="search"
+                className="form-input"
+                style={{ flex: '0 1 220px' }}
+                placeholder="Filter by category..."
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 aria-label="Filter by category"
-              >
-                <option value="">All Categories</option>
-                <option value="bottle">Water Bottles</option>
-                <option value="bag">Bags &amp; Backpacks</option>
-                <option value="laptop_tablet">Electronics</option>
-                <option value="keys">Keys &amp; IDs</option>
-              </select>
+              />
             </div>
           </div>
 
@@ -672,38 +678,44 @@ export const App: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <div className="form-group" style={{ flex: '1 1 200px' }}>
-                <label htmlFor="report-category" className="form-label">Category</label>
-                <select
+              <div className="form-group" style={{ flex: '1 1 220px' }}>
+                <label htmlFor="report-category" className="form-label">Item Category *</label>
+                <input
                   id="report-category"
-                  className="form-select"
+                  type="text"
+                  className="form-input"
+                  placeholder="Enter category (e.g. Water Bottle, Backpack, Earphones...)"
                   value={reportCategory}
                   onChange={(e) => setReportCategory(e.target.value)}
-                >
-                  <option value="bottle">Water Bottle</option>
-                  <option value="bag">Bag / Backpack</option>
-                  <option value="laptop_tablet">Laptop / Tablet</option>
-                  <option value="phone">Phone</option>
-                  <option value="keys">Keys</option>
-                  <option value="wallet">Wallet</option>
-                  <option value="clothing">Clothing</option>
-                  <option value="book">Book</option>
-                </select>
+                  aria-describedby={formErrors.category ? 'category-error' : undefined}
+                  aria-invalid={!!formErrors.category}
+                  required
+                />
+                {formErrors.category && (
+                  <span id="category-error" className="form-error" role="alert">
+                    {formErrors.category}
+                  </span>
+                )}
               </div>
 
-              <div className="form-group" style={{ flex: '1 1 200px' }}>
-                <label htmlFor="report-location" className="form-label">Campus Location</label>
-                <select
+              <div className="form-group" style={{ flex: '1 1 220px' }}>
+                <label htmlFor="report-location" className="form-label">Campus Location *</label>
+                <input
                   id="report-location"
-                  className="form-select"
+                  type="text"
+                  className="form-input"
+                  placeholder="Enter location (e.g. Central Library Floor 2, Cafeteria...)"
                   value={reportLocation}
                   onChange={(e) => setReportLocation(e.target.value)}
-                >
-                  <option value="Library - Floor 1">Library - Floor 1</option>
-                  <option value="Science Block - Floor 2">Science Block - Floor 2</option>
-                  <option value="Engineering Center - Lab A">Engineering Center - Lab A</option>
-                  <option value="Student Union - Cafeteria">Student Union - Cafeteria</option>
-                </select>
+                  aria-describedby={formErrors.location ? 'location-error' : undefined}
+                  aria-invalid={!!formErrors.location}
+                  required
+                />
+                {formErrors.location && (
+                  <span id="location-error" className="form-error" role="alert">
+                    {formErrors.location}
+                  </span>
+                )}
               </div>
             </div>
 

@@ -1,11 +1,12 @@
 import hashlib
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
 
 from fastapi import HTTPException, status
-from PIL import Image
+from PIL import Image, ImageFilter
 
 from app.domain.image_hash import compute_dhash
 
@@ -80,8 +81,12 @@ def validate_image_file(content: bytes) -> tuple[str, str]:
     return mime, ext
 
 
-def process_and_save_photo(content: bytes, upload_dir: str) -> ProcessedImage:
-    """AC-33, AC-34, AC-37: Strip EXIF, resize, thumbnail, compute dhash, and save under random UUID."""
+def process_and_save_photo(
+    content: bytes,
+    upload_dir: str,
+    privacy_regions: Sequence[tuple[int, int, int, int]] | None = None,
+) -> ProcessedImage:
+    """AC-33, AC-34, AC-37, Step 15: Strip EXIF, redact privacy zones, resize, thumbnail, compute dhash, and save."""
     mime, ext = validate_image_file(content)
     sha256 = hashlib.sha256(content).hexdigest()
 
@@ -95,6 +100,20 @@ def process_and_save_photo(content: bytes, upload_dir: str) -> ProcessedImage:
         save_format = "JPEG" if mime == "image/jpeg" else ("PNG" if mime == "image/png" else "WEBP")
         if save_format == "JPEG" and clean_img.mode in ("RGBA", "P"):
             clean_img = clean_img.convert("RGB")
+
+        # Step 15 Privacy Blurring: Redact sensitive privacy zones (faces, plates)
+        if privacy_regions:
+            img_w, img_h = clean_img.size
+            for x, y, rw, rh in privacy_regions:
+                x1 = max(0, min(x, img_w))
+                y1 = max(0, min(y, img_h))
+                x2 = max(0, min(x + rw, img_w))
+                y2 = max(0, min(y + rh, img_h))
+                if x2 > x1 and y2 > y1:
+                    box = (x1, y1, x2, y2)
+                    region = clean_img.crop(box)
+                    blurred = region.filter(ImageFilter.GaussianBlur(radius=15))
+                    clean_img.paste(blurred, box)
 
         # Resize if long side > 1,600 px (AC-33)
         w, h = clean_img.size

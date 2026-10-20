@@ -733,6 +733,7 @@ The benchmark generator, the metrics and the statistics in step 12 depend only o
 | D-15 | 2026-10-18 | A job queue and notification outbox in PostgreSQL | A message broker | No extra service, with transactional consistency |
 | D-16 | 2026-10-18 | Credentials only over TLS beyond localhost, with a private certificate authority | Plain HTTP on the network | Passwords and sessions must not be readable on the network |
 | D-17 | 2026-10-18 | Email-only identity with a campus-domain restriction | Collect phone numbers or student IDs | Data minimisation |
+| D-18 | 2026-10-20 | Automated face and license plate blurring in photo pipeline | Unredacted photo storage; external cloud vision APIs | Protects bystander and student privacy by smoothing sensitive biometric and vehicle zones before disk persistence without leaking images to third-party APIs |
 
 ## 21. Open Questions
 

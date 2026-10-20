@@ -402,6 +402,31 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   2. *Why is it critical that the database seed script is idempotent and marks all preloaded campus accounts and reports explicitly as synthetic?*
   3. *What mechanisms ensure that the production Docker containers operate securely without requiring outbound internet access during embedding and matching?*
 
+---
+
+## Step 15: Stretch Modules — Automated Privacy Blurring in the Photo Pipeline (Spec Section 19)
+
+* **What was built:**
+  * **Pure Domain Privacy Redaction (`backend/app/domain/privacy_blur.py`):**
+    * Implemented zero-framework, deterministic Gaussian image smoothing for target bounding boxes (`(x, y, width, height)`).
+    * Coordinate clamping logic preventing index errors on out-of-bounds inputs.
+  * **Photo Pipeline Integration (`backend/app/services/photo.py`):**
+    * Updated `process_and_save_photo` to accept optional `privacy_regions` to redact human faces, license plates, and student ID badges before permanent disk storage and thumbnail rendering.
+  * **Test Suite (`backend/tests/test_step15_privacy_blurring.py`):**
+    * 5 automated tests verifying bounding box pixel smoothing, preservation of unmasked regions, luminance variance reduction, and end-to-end file persistence.
+  * **Decisions Log Updates:**
+    * Logged decision **D-18** in [`DECISIONS.md`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/DECISIONS.md) and [`spec.md`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/spec.md).
+* **Why it is designed that way:**
+  * **Privacy by Design:** Bystanders and personal identification details (faces, car license plates, university badges) inadvertently captured in lost/found photographs must never be permanently saved or exposed publicly. Blurring these bounding boxes before writing bytes to disk guarantees zero forensic retrieval of unredacted biometric or vehicular markers.
+  * **Offline Pure Domain Execution:** Running redaction locally using PIL Gaussian filters maintains strict air-gapped compliance (**AC-139**) and avoids sending sensitive student media to third-party cloud vision APIs.
+* **One thing that could go wrong:**
+  * **Degraded Perceptual Hashing if Whole Image Blurred:** Blurring overly broad regions could destroy perceptual image features needed for duplicate detection (`dHash`) or visual CLIP matching. Mitigated by applying blur strictly to isolated bounding boxes while preserving the surrounding item context.
+* **Quiz Questions (for viva preparation):**
+  1. *Why should biometric face and license plate redaction occur before saving images to disk rather than dynamically blurring them on the client?*
+  2. *How does Gaussian smoothing inside a localized bounding box reduce edge variance while preserving overall image layout and perceptual dHash stability?*
+  3. *Why must the privacy blurring logic reside in the pure domain layer without external cloud computer vision dependencies?*
+
+
 
 
 

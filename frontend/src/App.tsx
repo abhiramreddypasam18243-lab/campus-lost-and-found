@@ -1292,17 +1292,17 @@ export const App: React.FC = () => {
             {authMode === 'signin' ? (
               <form onSubmit={handleManualLogin} className="login-form">
                 <div className="form-group">
-                  <label htmlFor="login-email">Campus Email Address</label>
+                  <label htmlFor="login-email">College / Institutional Email Address</label>
                   <input
                     id="login-email"
                     type="email"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="abhiramr@iisc.ac.in"
+                    placeholder="e.g. abhiramr@iisc.ac.in or student@college.edu"
                     required
                   />
                   <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                    Requires an authorized institutional domain (@iisc.ac.in, @campus.edu, or @student.campus.edu)
+                    Enter your official college or university email address
                   </small>
                 </div>
                 <div className="form-group">
@@ -1339,7 +1339,7 @@ export const App: React.FC = () => {
                   </button>
                 </div>
                 <div className="auth-note">
-                  💡 <strong>Campus accounts:</strong> <code>abhiramr@iisc.ac.in</code> (Admin), <code>student1@campus.edu</code> (Student), <code>moderator@campus.edu</code> (Staff).
+                  💡 <strong>Default accounts:</strong> <code>abhiramr@iisc.ac.in</code> (Admin), <code>student1@campus.edu</code> (Student), <code>moderator@campus.edu</code> (Staff). Or register with your college email!
                 </div>
               </form>
             ) : (
@@ -1356,17 +1356,17 @@ export const App: React.FC = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="register-email">Campus Email</label>
+                  <label htmlFor="register-email">College / Institutional Email</label>
                   <input
                     id="register-email"
                     type="email"
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
-                    placeholder="abhiramr@iisc.ac.in"
+                    placeholder="e.g. student@iisc.ac.in, name@college.edu, roll@univ.ac.in"
                     required
                   />
                   <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                    Must end with @iisc.ac.in, @campus.edu or @student.campus.edu
+                    Accepts all official university &amp; college domains (.ac.in, .edu, .edu.in, .ac.uk, etc.)
                   </small>
                 </div>
                 <div className="form-group">

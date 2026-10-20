@@ -13,11 +13,13 @@ export interface AIAnalysisResult {
 interface AIPhotoAnalyzerProps {
   onApplySuggestions: (title: string, category: string, description: string) => void
   onPhotoSelected?: (file: File) => void
+  onOpenRedactionStudio?: (imageUrl: string) => void
 }
 
 export const AIPhotoAnalyzer: React.FC<AIPhotoAnalyzerProps> = ({
   onApplySuggestions,
   onPhotoSelected,
+  onOpenRedactionStudio,
 }) => {
   const [analyzing, setAnalyzing] = useState<boolean>(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -214,6 +216,23 @@ export const AIPhotoAnalyzer: React.FC<AIPhotoAnalyzerProps> = ({
           >
             ✨ Auto-Fill Title, Category &amp; Description
           </button>
+
+          {onOpenRedactionStudio && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              style={{
+                width: '100%',
+                marginTop: '0.5rem',
+                borderColor: analysisResult.privacyWarning ? 'var(--accent-amber)' : 'rgba(56, 189, 248, 0.4)',
+                color: analysisResult.privacyWarning ? '#fde68a' : '#7dd3fc',
+                background: 'rgba(15, 23, 42, 0.8)',
+              }}
+              onClick={() => onOpenRedactionStudio(previewUrl)}
+            >
+              🕶️ Open Privacy Redaction Studio (Auto-Blur Faces &amp; IDs)
+            </button>
+          )}
         </div>
       )}
     </div>

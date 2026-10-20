@@ -67,7 +67,8 @@ export const translations: Record<Language, Record<string, string>> = {
     passcodeLabel: 'Single-Use Verification Code',
     verifyCodeBtn: 'Verify Code & Complete Handover',
     idNoteLabel: 'Identity Check Note (Mandatory ≥ 10 characters)',
-    idNotePlaceholder: 'Record student ID card check, e.g., Verified student ID card in person at desk.',
+    privacyStudioBtn: '🕶️ Privacy Redaction Studio',
+    privacyStudioNotice: 'Auto-detect and blur faces, student ID cards, and roll numbers before public listing.',
     langSelectLabel: 'Language',
   },
   hi: {
@@ -120,7 +121,8 @@ export const translations: Record<Language, Record<string, string>> = {
     passcodeLabel: 'एकल-उपयोग सत्यापन कोड',
     verifyCodeBtn: 'कोड सत्यापित करें और हैंडओवर पूरा करें',
     idNoteLabel: 'पहचान जांच नोट (कम से कम 10 अक्षर)',
-    idNotePlaceholder: 'छात्र आईडी सत्यापन रिकॉर्ड करें, उदा. डेस्क पर व्यक्तिगत रूप से छात्र आईडी जांची गई।',
+    privacyStudioBtn: '🕶️ गोपनीयता संपादन स्टूडियो (चेहरे और आईडी छुपाएं)',
+    privacyStudioNotice: 'सार्वजनिक करने से पहले चेहरे, छात्र आईडी और रोल नंबर को स्वचालित रूप से धुंधला करें।',
     langSelectLabel: 'भाषा',
   },
   es: {
@@ -174,6 +176,8 @@ export const translations: Record<Language, Record<string, string>> = {
     verifyCodeBtn: 'Verificar Código y Completar Entrega',
     idNoteLabel: 'Nota de Verificación de Identidad (≥ 10 caracteres)',
     idNotePlaceholder: 'Registre la verificación física del carnet de estudiante.',
+    privacyStudioBtn: '🕶️ Estudio de Privacidad (Difuminar Rostros e ID)',
+    privacyStudioNotice: 'Detecta y difumina rostros y números de identificación estudiantil automáticamente.',
     langSelectLabel: 'Idioma',
   },
   fr: {
@@ -227,6 +231,8 @@ export const translations: Record<Language, Record<string, string>> = {
     verifyCodeBtn: 'Valider le Code et Terminer la Remise',
     idNoteLabel: 'Note de Contrôle d\'Identité (≥ 10 caractères)',
     idNotePlaceholder: 'Enregistrez le contrôle physique de la carte étudiante.',
+    privacyStudioBtn: '🕶️ Studio de Confidentialité (Floutage Visages & ID)',
+    privacyStudioNotice: 'Détecte et floute automatiquement les visages, cartes d\'étudiant et numéros sensibles.',
     langSelectLabel: 'Langue',
   },
   de: {
@@ -280,6 +286,8 @@ export const translations: Record<Language, Record<string, string>> = {
     verifyCodeBtn: 'Code prüfen & Übergabe abschließen',
     idNoteLabel: 'Notiz zur Ausweiskontrolle (mindestens 10 Zeichen)',
     idNotePlaceholder: 'Ausweisprüfung vor Ort am Schalter vermerken.',
+    privacyStudioBtn: '🕶️ Datenschutz-Studio (Gesichter & Ausweise unkenntlich machen)',
+    privacyStudioNotice: 'Erkennt und verwischt Gesichter, Studierendenausweise und vertrauliche Nummern automatisch.',
     langSelectLabel: 'Sprache',
   },
   zh: {
@@ -332,7 +340,8 @@ export const translations: Record<Language, Record<string, string>> = {
     passcodeLabel: '一次性交接码',
     verifyCodeBtn: '核验交接码并完成归还',
     idNoteLabel: '身份核验备注（至少 10 个字符）',
-    idNotePlaceholder: '记录现场学生证查验详情，例如：现场核验证件并确认。',
+    privacyStudioBtn: '🕶️ 隐私遮盖工作台（自动模糊人脸与证件）',
+    privacyStudioNotice: '自动检测并模糊人脸、学生证号及条形码，防止敏感信息公开。',
     langSelectLabel: '语言',
   },
 }

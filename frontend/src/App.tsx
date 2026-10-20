@@ -5,6 +5,7 @@ import { QRCodeHandover } from './components/QRCodeHandover'
 import { ClaimDiscussionChat } from './components/ClaimDiscussionChat'
 import { Language, translations } from './i18n/translations'
 import { LanguageSelector } from './components/LanguageSelector'
+import { PrivacyRedactionStudio } from './components/PrivacyRedactionStudio'
 
 type TabType = 'browse' | 'report' | 'matches' | 'handover' | 'moderation' | 'dashboard'
 
@@ -92,6 +93,14 @@ export const App: React.FC = () => {
   const [showBrowseMap, setShowBrowseMap] = useState<boolean>(false)
   const [showReportMap, setShowReportMap] = useState<boolean>(false)
   const [activeChatClaim, setActiveChatClaim] = useState<{ id: string; title: string } | null>(null)
+  const [showPrivacyStudio, setShowPrivacyStudio] = useState<boolean>(false)
+  const [studioInitialImage, setStudioInitialImage] = useState<string | null>(null)
+  const [attachedPhoto, setAttachedPhoto] = useState<{
+    file: File
+    dataUrl: string
+    isRedacted: boolean
+    blurredCount: number
+  } | null>(null)
 
   // Language / i18n state
   const [language, setLanguage] = useState<Language>(() => {
@@ -366,11 +375,15 @@ export const App: React.FC = () => {
     }
 
     setFormErrors({})
-    setReportSuccess(`Successfully registered ${reportType} report: "${reportTitle}". AI matching enqueued.`)
+    const photoNote = attachedPhoto
+      ? ` (Photo attached with ${attachedPhoto.blurredCount} privacy zones blurred & EXIF stripped)`
+      : ''
+    setReportSuccess(`Successfully registered ${reportType} report: "${reportTitle}".${photoNote} AI matching enqueued.`)
     setReportTitle('')
     setReportCategory('')
     setReportLocation('')
     setReportDesc('')
+    setAttachedPhoto(null)
   }
 
   const handleDismissMatch = (foundId: string) => {
@@ -707,6 +720,10 @@ export const App: React.FC = () => {
               setReportCategory(category)
               setReportDesc(desc)
             }}
+            onOpenRedactionStudio={(imgUrl) => {
+              setStudioInitialImage(imgUrl)
+              setShowPrivacyStudio(true)
+            }}
           />
 
           <form onSubmit={handleReportSubmit} className="form-grid" noValidate>
@@ -812,22 +829,124 @@ export const App: React.FC = () => {
               )}
             </div>
 
-            {/* AC-127: Mobile camera capture attribute */}
+            {/* AC-127 & Step 15: Photo upload & Computer Vision Privacy Redaction */}
             <div className="form-group">
-              <label htmlFor="report-photo" className="form-label">
-                Attach Photo (Opens Camera on Mobile Devices)
-              </label>
-              <input
-                id="report-photo"
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="form-input"
-                aria-label="Upload photo using camera or file"
-              />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Maximum 3 photos (up to 15MB total). All photos are stripped of EXIF data.
-              </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <label htmlFor="report-photo" className="form-label" style={{ margin: 0 }}>
+                  Attach Photo (Camera / File)
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    fontSize: '0.78rem',
+                    padding: '0.3rem 0.75rem',
+                    borderColor: 'rgba(56, 189, 248, 0.4)',
+                    color: '#7dd3fc',
+                    background: 'rgba(15, 23, 42, 0.7)',
+                  }}
+                  onClick={() => {
+                    setStudioInitialImage(attachedPhoto?.dataUrl || null)
+                    setShowPrivacyStudio(true)
+                  }}
+                >
+                  {t('privacyStudioBtn', '🕶️ Privacy Redaction Studio (Auto-Blur)')}
+                </button>
+              </div>
+
+              {attachedPhoto ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    background: 'rgba(15, 23, 42, 0.6)',
+                    padding: '0.75rem 1rem',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-accent)',
+                  }}
+                >
+                  <img
+                    src={attachedPhoto.dataUrl}
+                    alt="Sanitized item attachment"
+                    style={{
+                      width: '64px',
+                      height: '64px',
+                      objectFit: 'cover',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-subtle)',
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7' }}>
+                        🛡️ {attachedPhoto.isRedacted ? `${attachedPhoto.blurredCount} Sensitive Zones Redacted` : 'Photo Attached'}
+                      </span>
+                      <small style={{ color: 'var(--text-muted)' }}>EXIF Stripped</small>
+                    </div>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      {attachedPhoto.isRedacted
+                        ? 'Student faces, ID cards & text strips blurred. Clean photo attached.'
+                        : 'Uploaded original photo. You can blur faces & IDs anytime.'}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+                    <button
+                      type="button"
+                      className="link-btn"
+                      style={{ fontSize: '0.8rem' }}
+                      onClick={() => {
+                        setStudioInitialImage(attachedPhoto.dataUrl)
+                        setShowPrivacyStudio(true)
+                      }}
+                    >
+                      ✏️ Edit Blur
+                    </button>
+                    <button
+                      type="button"
+                      className="link-btn"
+                      style={{ fontSize: '0.8rem', color: 'var(--accent-rose)' }}
+                      onClick={() => setAttachedPhoto(null)}
+                    >
+                      ✕ Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <input
+                    id="report-photo"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="form-input"
+                    aria-label="Upload photo using camera or file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = (ev) => {
+                        const dataUrl = ev.target?.result as string
+                        setAttachedPhoto({
+                          file,
+                          dataUrl,
+                          isRedacted: false,
+                          blurredCount: 0,
+                        })
+                      }
+                      reader.readAsDataURL(file)
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Maximum 3 photos (up to 15MB total). All photos are stripped of EXIF data.
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: '#38bdf8' }}>
+                      Tip: Use Privacy Studio to auto-blur student faces &amp; card numbers.
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             <button type="submit" className="btn btn-primary" style={{ marginTop: '0.5rem' }}>
@@ -1312,6 +1431,23 @@ export const App: React.FC = () => {
           itemTitle={activeChatClaim.title}
           userRole={currentUser?.role || 'student'}
           onClose={() => setActiveChatClaim(null)}
+        />
+      )}
+
+      {/* Automated Face & ID Privacy Redaction Studio Modal */}
+      {showPrivacyStudio && (
+        <PrivacyRedactionStudio
+          initialImageUrl={studioInitialImage}
+          onApplyRedactedPhoto={(file, dataUrl, count) => {
+            setAttachedPhoto({
+              file,
+              dataUrl,
+              isRedacted: true,
+              blurredCount: count,
+            })
+            setShowPrivacyStudio(false)
+          }}
+          onClose={() => setShowPrivacyStudio(false)}
         />
       )}
     </main>

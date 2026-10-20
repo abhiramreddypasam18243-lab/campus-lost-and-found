@@ -37,8 +37,24 @@ interface DashboardMetrics {
   is_synthetic_demo: boolean
 }
 
+interface UserProfile {
+  id: string
+  email: string
+  display_name: string | null
+  role: string
+}
+
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('browse')
+
+  // User Authentication state
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null)
+  const [csrfToken, setCsrfToken] = useState<string | null>(null)
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false)
+  const [loginEmail, setLoginEmail] = useState<string>('')
+  const [loginPassword, setLoginPassword] = useState<string>('')
+  const [loginLoading, setLoginLoading] = useState<boolean>(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
 
   // Browse state
   const [items, setItems] = useState<FoundItem[]>([])
@@ -162,6 +178,77 @@ export const App: React.FC = () => {
     }
   }, [activeTab])
 
+  // Check current session on mount
+  useEffect(() => {
+    fetch('/api/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.email) {
+          setCurrentUser(data)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const handleLogin = async (email: string, pass: string) => {
+    setLoginLoading(true)
+    setLoginError(null)
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        const msg = err.detail?.message || err.detail || 'Authentication failed. Please check credentials.'
+        throw new Error(msg)
+      }
+      const data = await res.json()
+      setCurrentUser(data.user)
+      setCsrfToken(data.csrf_token)
+      setShowLoginModal(false)
+      setBrowseError(null)
+      // Refresh listings
+      fetch('/api/found?limit=20')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => d && setItems(d.items || []))
+        .catch(() => {})
+      if (data.user.role === 'moderator' || data.user.role === 'admin') {
+        fetch('/api/dashboard')
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => d && setMetrics(d))
+          .catch(() => {})
+      }
+    } catch (e: unknown) {
+      setLoginError(e instanceof Error ? e.message : 'Login failed')
+    } finally {
+      setLoginLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
+      })
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null)
+    setCsrfToken(null)
+  }
+
+  const handleQuickLogin = (email: string, pass: string) => {
+    handleLogin(email, pass)
+  }
+
+  const handleManualLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    handleLogin(loginEmail, loginPassword)
+  }
+
   const handleReportSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const errors: Record<string, string> = {}
@@ -233,6 +320,27 @@ export const App: React.FC = () => {
 
   return (
     <main className="app-container" id="main-content">
+      {/* Top Auth Bar */}
+      <div className="auth-header-bar">
+        {currentUser ? (
+          <div className="user-profile-badge">
+            <span className="user-role-tag">{currentUser.role}</span>
+            <span className="user-email">{currentUser.email}</span>
+            <button className="btn-secondary btn-sm" onClick={handleLogout}>
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <button
+            className="btn-primary btn-sm"
+            onClick={() => setShowLoginModal(true)}
+            id="open-signin-modal"
+          >
+            🔑 Sign In / Demo Accounts
+          </button>
+        )}
+      </div>
+
       <header className="app-header">
         <div className="badge">
           <span className="badge-dot" aria-hidden="true"></span>
@@ -796,6 +904,100 @@ export const App: React.FC = () => {
             </div>
           )}
         </section>
+      )}
+
+      {/* Sign-in / Demo Login Modal */}
+      {showLoginModal && (
+        <div className="modal-backdrop" onClick={() => setShowLoginModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Sign In to Campus Network</h2>
+              <button
+                className="modal-close"
+                onClick={() => setShowLoginModal(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="modal-subtitle">
+              Select a pre-configured demo account to explore roles, or log in with your campus email (@campus.edu).
+            </p>
+
+            <div className="demo-accounts-grid">
+              <button
+                type="button"
+                className="demo-role-btn"
+                onClick={() => handleQuickLogin('student1@campus.edu', 'StudentPass2026!')}
+              >
+                🎓 <strong>Alice (Student)</strong>
+                <small>student1@campus.edu</small>
+              </button>
+              <button
+                type="button"
+                className="demo-role-btn"
+                onClick={() => handleQuickLogin('student2@campus.edu', 'StudentPass2026!')}
+              >
+                🔍 <strong>Bob (Student)</strong>
+                <small>student2@campus.edu</small>
+              </button>
+              <button
+                type="button"
+                className="demo-role-btn"
+                onClick={() => handleQuickLogin('moderator@campus.edu', 'CampusMod2026!')}
+              >
+                🛡️ <strong>Staff Moderator</strong>
+                <small>moderator@campus.edu</small>
+              </button>
+              <button
+                type="button"
+                className="demo-role-btn"
+                onClick={() => handleQuickLogin('admin@campus.edu', 'CampusAdmin2026!')}
+              >
+                ⚙️ <strong>Campus Admin</strong>
+                <small>admin@campus.edu</small>
+              </button>
+            </div>
+
+            <div className="divider">
+              <span>OR ENTER CREDENTIALS</span>
+            </div>
+
+            <form onSubmit={handleManualLogin} className="login-form">
+              <div className="form-group">
+                <label htmlFor="login-email">Campus Email</label>
+                <input
+                  id="login-email"
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="e.g. alice@campus.edu"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="login-password">Password</label>
+                <input
+                  id="login-password"
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              {loginError && <p className="form-error">{loginError}</p>}
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={loginLoading}
+                style={{ width: '100%', marginTop: '0.5rem' }}
+              >
+                {loginLoading ? 'Authenticating...' : 'Sign In'}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </main>
   )

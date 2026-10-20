@@ -3,6 +3,8 @@ import { InteractiveCampusMap } from './components/InteractiveCampusMap'
 import { AIPhotoAnalyzer } from './components/AIPhotoAnalyzer'
 import { QRCodeHandover } from './components/QRCodeHandover'
 import { ClaimDiscussionChat } from './components/ClaimDiscussionChat'
+import { Language, translations } from './i18n/translations'
+import { LanguageSelector } from './components/LanguageSelector'
 
 type TabType = 'browse' | 'report' | 'matches' | 'handover' | 'moderation' | 'dashboard'
 
@@ -90,6 +92,20 @@ export const App: React.FC = () => {
   const [showBrowseMap, setShowBrowseMap] = useState<boolean>(false)
   const [showReportMap, setShowReportMap] = useState<boolean>(false)
   const [activeChatClaim, setActiveChatClaim] = useState<{ id: string; title: string } | null>(null)
+
+  // Language / i18n state
+  const [language, setLanguage] = useState<Language>(() => {
+    return (localStorage.getItem('campus_app_lang') as Language) || 'en'
+  })
+
+  const handleLanguageChange = (lang: Language) => {
+    setLanguage(lang)
+    localStorage.setItem('campus_app_lang', lang)
+  }
+
+  const t = (key: string, defaultText: string): string => {
+    return translations[language]?.[key] || defaultText
+  }
 
   // Matches state
   const [matches, setMatches] = useState<MatchCandidate[]>([
@@ -397,13 +413,14 @@ export const App: React.FC = () => {
   return (
     <main className="app-container" id="main-content">
       {/* Top Auth Bar */}
-      <div className="auth-header-bar">
+      <div className="auth-header-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <LanguageSelector currentLanguage={language} onSelectLanguage={handleLanguageChange} />
         {currentUser ? (
           <div className="user-profile-badge">
             <span className="user-role-tag">{currentUser.role}</span>
             <span className="user-email">{currentUser.email}</span>
             <button className="btn-secondary btn-sm" onClick={handleLogout}>
-              Sign Out
+              {t('signOutBtn', 'Sign Out')}
             </button>
           </div>
         ) : (
@@ -412,7 +429,7 @@ export const App: React.FC = () => {
             onClick={() => setShowLoginModal(true)}
             id="open-signin-modal"
           >
-            🔑 Sign In / Register
+            {t('signInBtn', '🔑 Sign In / Register')}
           </button>
         )}
       </div>
@@ -422,10 +439,9 @@ export const App: React.FC = () => {
           <span className="badge-dot" aria-hidden="true"></span>
           <span>Smart Campus Network</span>
         </div>
-        <h1 id="app-title">Campus Lost &amp; Found</h1>
+        <h1 id="app-title">{t('appTitle', 'Campus Lost & Found')}</h1>
         <p className="subtitle">
-          Privacy-preserving campus asset recovery with multimodal AI matching, verified claims, and
-          cryptographic handovers.
+          {t('appSubtitle', 'Privacy-preserving campus asset recovery with multimodal AI matching, verified claims, and cryptographic handovers.')}
         </p>
       </header>
 
@@ -440,7 +456,7 @@ export const App: React.FC = () => {
           <div className="guest-welcome-text">
             <span className="guest-welcome-icon" aria-hidden="true">🔑</span>
             <div>
-              <strong>Currently Browsing as Guest:</strong> Sign in to your campus account or create a new one.
+              <strong>{t('guestNoticeTitle', 'Currently Browsing as Guest:')}</strong> {t('guestNoticeSub', 'Sign in to your campus account or create a new one.')}
               <span className="guest-welcome-sub">Unlock item reporting, claim submissions, handover verification, and real-time dashboard.</span>
             </div>
           </div>
@@ -452,17 +468,17 @@ export const App: React.FC = () => {
             }}
             id="banner-signin-btn"
           >
-            Sign In / Register →
+            {t('signInAction', 'Sign In / Register →')}
           </button>
         </div>
       ) : (
         <div className="active-user-banner">
           <div>
-            👋 Welcome, <strong>{currentUser.email}</strong> &nbsp;
+            👋 {t('welcomeBack', 'Welcome,')} <strong>{currentUser.email}</strong> &nbsp;
             <span className="user-role-tag">{currentUser.role}</span>
           </div>
           <button className="btn btn-secondary btn-sm" onClick={handleLogout}>
-            Sign Out
+            {t('signOutBtn', 'Sign Out')}
           </button>
         </div>
       )}
@@ -477,7 +493,7 @@ export const App: React.FC = () => {
           className={`nav-button ${activeTab === 'browse' ? 'active' : ''}`}
           onClick={() => setActiveTab('browse')}
         >
-          🔍 Browse Found Items
+          {t('tabBrowse', '🔍 Browse Found Items')}
         </button>
         <button
           role="tab"
@@ -487,7 +503,7 @@ export const App: React.FC = () => {
           className={`nav-button ${activeTab === 'report' ? 'active' : ''}`}
           onClick={() => setActiveTab('report')}
         >
-          📝 Report an Item
+          {t('tabReport', '📝 Report an Item')}
         </button>
         <button
           role="tab"
@@ -497,7 +513,7 @@ export const App: React.FC = () => {
           className={`nav-button ${activeTab === 'matches' ? 'active' : ''}`}
           onClick={() => setActiveTab('matches')}
         >
-          ✨ AI Matches
+          {t('tabMatches', '✨ AI Matches')}
         </button>
         <button
           role="tab"
@@ -507,7 +523,7 @@ export const App: React.FC = () => {
           className={`nav-button ${activeTab === 'handover' ? 'active' : ''}`}
           onClick={() => setActiveTab('handover')}
         >
-          🤝 Handover Desk
+          {t('tabHandover', '🤝 Handover Desk')}
         </button>
         <button
           role="tab"
@@ -517,7 +533,7 @@ export const App: React.FC = () => {
           className={`nav-button ${activeTab === 'moderation' ? 'active' : ''}`}
           onClick={() => setActiveTab('moderation')}
         >
-          🛡️ Moderation Queue
+          {t('tabModeration', '🛡️ Moderation Queue')}
         </button>
         <button
           role="tab"
@@ -527,7 +543,7 @@ export const App: React.FC = () => {
           className={`nav-button ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
         >
-          📊 Operational Analytics
+          {t('tabAnalytics', '📊 Operational Analytics')}
         </button>
 
         {/* Dedicated Auth Button in Navbar */}
@@ -538,7 +554,7 @@ export const App: React.FC = () => {
             title="Click to sign out"
             id="nav-user-signout"
           >
-            👤 {currentUser.email.split('@')[0]} [Sign Out]
+            👤 {currentUser.email.split('@')[0]} [{t('signOutBtn', 'Sign Out')}]
           </button>
         ) : (
           <button
@@ -546,7 +562,7 @@ export const App: React.FC = () => {
             onClick={() => setShowLoginModal(true)}
             id="nav-signin-btn"
           >
-            🔑 Sign In / Register
+            {t('signInBtn', '🔑 Sign In / Register')}
           </button>
         )}
       </nav>
@@ -656,7 +672,7 @@ export const App: React.FC = () => {
       {activeTab === 'report' && (
         <section id="panel-report" role="tabpanel" aria-labelledby="tab-report" className="card">
           <div className="card-header">
-            <h2 className="card-title">Register an Item Report</h2>
+            <h2 className="card-title">{t('reportHeading', 'Register an Item Report')}</h2>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 type="button"
@@ -664,7 +680,7 @@ export const App: React.FC = () => {
                 style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                 onClick={() => setReportType('lost')}
               >
-                I Lost Something
+                {t('iLostSomething', 'I Lost Something')}
               </button>
               <button
                 type="button"
@@ -672,7 +688,7 @@ export const App: React.FC = () => {
                 style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                 onClick={() => setReportType('found')}
               >
-                I Found Something
+                {t('iFoundSomething', 'I Found Something')}
               </button>
             </div>
           </div>

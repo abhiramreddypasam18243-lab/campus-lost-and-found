@@ -47,6 +47,26 @@ async def test_ac_01_registration_disallowed_domain(async_client: AsyncClient) -
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "email",
+    [
+        "stranger@evilcampus.com",  # keyword in name, not a whitelisted domain
+        "stranger@freeschool.xyz",
+        "stranger@other-university.edu",  # academic suffix, not a whitelisted domain
+        "stranger@campus.edu.attacker.net",  # whitelisted domain as a prefix
+    ],
+)
+async def test_ac_01_registration_lookalike_domains_rejected(
+    async_client: AsyncClient, email: str
+) -> None:
+    """AC-01 / P5: only exact ALLOWED_EMAIL_DOMAINS entries register; look-alikes return 422."""
+    payload = {"email": email, "password": "valid_secure_password_1234"}
+    response = await async_client.post("/api/auth/register", json=payload)
+    assert response.status_code == 422
+    assert "email_domain_not_allowed" in str(response.json())
+
+
+@pytest.mark.asyncio
 async def test_ac_01_registration_duplicate_email(async_client: AsyncClient) -> None:
     """AC-01: Duplicate email (compared case-insensitively) returns 409."""
     payload1 = {

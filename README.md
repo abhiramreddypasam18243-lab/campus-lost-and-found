@@ -6,7 +6,7 @@ An accessible, privacy-preserving campus lost-and-found system featuring explain
 
 ## 1. Overview
 The platform combines a reliable campus operational workflow with a controlled retrieval research framework:
-* **Product:** Privacy-safe found item listings, hierarchical campus location tree, safe image pipeline (magic byte verification, pixel guards, EXIF metadata stripping, 64-bit dHash duplicate detection), moderator claim locks, single-use 8-character handover codes (HMAC-SHA256, 3-attempt lock, 48-hour expiry), transactional outbox notifications, and retention rules.
+* **Product:** Privacy-safe found item listings, hierarchical campus location tree, safe image pipeline (magic byte verification, pixel guards, EXIF metadata stripping, 64-bit dHash duplicate detection), moderator claim locks, single-use 8-character handover codes (HMAC-SHA256, 5-attempt lock, 48-hour expiry), transactional outbox notifications, and retention rules.
 * **Research:** Controlled evaluation comparing BM25 keyword search, text embeddings (`all-MiniLM-L6-v2`), CLIP ViT-B/32 image embeddings, hand-weighted hybrid, and learned fusion across 400 benchmark items with bootstrap confidence intervals and paired hypothesis testing ($H_1$).
 
 ---

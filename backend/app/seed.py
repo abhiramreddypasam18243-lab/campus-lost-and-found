@@ -3,27 +3,31 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.database import AsyncSessionLocal
 from app.core.security import hash_password
 from app.models.embeddings import ModelRegistry
 from app.models.location import CampusLocation, LocationAdjacency
 from app.models.report import ItemReport
 from app.models.user import User
+from app.services.job_queue import enqueue_job
 
 
 async def seed_data(session: AsyncSession) -> None:
     now = datetime.now(UTC)
 
     # 1. Seed Model Registry
+    settings = get_settings()
     models_to_seed = [
-        ("text", "all-MiniLM-L6-v2", "v1", 384),
-        ("image", "clip-ViT-B-32", "v1", 512),
+        ("text", settings.TEXT_MODEL_NAME, settings.TEXT_MODEL_VERSION, 384),
+        ("image", settings.CLIP_MODEL_NAME, settings.CLIP_MODEL_VERSION, 512),
     ]
     for m_type, m_name, m_ver, dim in models_to_seed:
         existing = (
@@ -35,6 +39,20 @@ async def seed_data(session: AsyncSession) -> None:
                 )
             )
         ).scalar_one_or_none()
+        # Exactly one active version per model type: the pinned one from settings.
+        others = (
+            (
+                await session.execute(
+                    select(ModelRegistry).where(
+                        ModelRegistry.model_type == m_type, ModelRegistry.is_active.is_(True)
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for other in others:
+            other.is_active = other is existing
         if not existing:
             reg = ModelRegistry(
                 model_type=m_type,
@@ -44,24 +62,50 @@ async def seed_data(session: AsyncSession) -> None:
                 is_active=True,
             )
             session.add(reg)
+        else:
+            existing.is_active = True
 
     # 2. Seed Campus Locations
     locations_tree = [
-        ("Library", "building", Decimal("12.971"), Decimal("77.594"), [
-            ("Library - Floor 1", "floor"),
-            ("Library - Floor 2", "floor"),
-        ]),
-        ("Science Block", "building", Decimal("12.972"), Decimal("77.595"), [
-            ("Science Block - Floor 1", "floor"),
-            ("Science Block - Lab 101", "room"),
-        ]),
-        ("Engineering Center", "building", Decimal("12.973"), Decimal("77.596"), [
-            ("Engineering - Lab A", "room"),
-            ("Engineering - Lab B", "room"),
-        ]),
-        ("Student Union", "building", Decimal("12.970"), Decimal("77.593"), [
-            ("Cafeteria Area", "area"),
-        ]),
+        (
+            "Library",
+            "building",
+            Decimal("12.971"),
+            Decimal("77.594"),
+            [
+                ("Library - Floor 1", "floor"),
+                ("Library - Floor 2", "floor"),
+            ],
+        ),
+        (
+            "Science Block",
+            "building",
+            Decimal("12.972"),
+            Decimal("77.595"),
+            [
+                ("Science Block - Floor 1", "floor"),
+                ("Science Block - Lab 101", "room"),
+            ],
+        ),
+        (
+            "Engineering Center",
+            "building",
+            Decimal("12.973"),
+            Decimal("77.596"),
+            [
+                ("Engineering - Lab A", "room"),
+                ("Engineering - Lab B", "room"),
+            ],
+        ),
+        (
+            "Student Union",
+            "building",
+            Decimal("12.970"),
+            Decimal("77.593"),
+            [
+                ("Cafeteria Area", "area"),
+            ],
+        ),
     ]
 
     location_map: dict[str, CampusLocation] = {}
@@ -107,18 +151,21 @@ async def seed_data(session: AsyncSession) -> None:
 
     # 3. Seed Users for each role
     users_to_seed = [
-        ("abhiramr@iisc.ac.in", "Abhiram@IISc2026!", "Abhiram R (IISc)", "admin"),
         ("admin@campus.edu", "CampusAdmin2026!", "Campus Administrator", "admin"),
         ("moderator@campus.edu", "CampusMod2026!", "Staff Moderator", "moderator"),
         ("student1@campus.edu", "StudentPass2026!", "Alice Student", "user"),
         ("student2@campus.edu", "StudentPass2026!", "Bob Student", "user"),
     ]
 
+    # Optional personal admin, configured only through the environment (never committed).
+    seed_admin_email = os.environ.get("SEED_ADMIN_EMAIL", "").strip().lower()
+    seed_admin_password = os.environ.get("SEED_ADMIN_PASSWORD", "")
+    if seed_admin_email and seed_admin_password:
+        users_to_seed.append((seed_admin_email, seed_admin_password, "Administrator", "admin"))
+
     user_map: dict[str, User] = {}
     for email, raw_pw, display_name, role in users_to_seed:
-        u = (
-            await session.execute(select(User).where(User.email == email))
-        ).scalar_one_or_none()
+        u = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
         if not u:
             u = User(
                 email=email,
@@ -186,6 +233,8 @@ async def seed_data(session: AsyncSession) -> None:
                 window_end=now - timedelta(hours=5),
             )
             session.add(rep)
+            await session.flush()
+            await enqueue_job(session, kind="embed_report_text", entity_id=rep.id)
 
     await session.commit()
     print("Seed data successfully applied!")

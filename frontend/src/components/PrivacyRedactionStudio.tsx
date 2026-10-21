@@ -190,7 +190,7 @@ export const PrivacyRedactionStudio: React.FC<PrivacyRedactionStudioProps> = ({
 
       ctx.fillStyle = '#854d0e'
       ctx.font = 'bold 10px sans-serif'
-      ctx.fillText('PROPERTY OF ABHIRAM', 370, 275)
+      ctx.fillText('PROPERTY OF STUDENT', 370, 275)
       ctx.font = '11px sans-serif'
       ctx.fillStyle = '#b91c1c'
       ctx.fillText('CELL: +91 98765-43210', 370, 295)

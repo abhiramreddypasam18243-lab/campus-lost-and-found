@@ -1,8 +1,22 @@
 import asyncio
 import logging
+import os
 import signal
+import socket
 import sys
+import time
+from datetime import UTC, datetime
 from typing import Any
+
+from sqlalchemy.dialects.postgresql import insert
+
+from app.core.config import get_settings
+from app.core.database import AsyncSessionLocal
+from app.models.jobs import WorkerHeartbeat
+from app.services.embedder import get_embedder
+from app.services.handover import expire_stale_handovers
+from app.services.job_runner import process_available_jobs
+from app.services.retention import expire_unclaimed_reports, purge_closed_images
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,12 +33,56 @@ def handle_stop(sig: int, frame: Any) -> None:
     running = False
 
 
+async def write_heartbeat(worker_id: str) -> None:
+    now = datetime.now(UTC)
+    async with AsyncSessionLocal() as db:
+        stmt = insert(WorkerHeartbeat).values(worker_id=worker_id, last_seen_at=now)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[WorkerHeartbeat.worker_id], set_={"last_seen_at": now}
+        )
+        await db.execute(stmt)
+        await db.commit()
+
+
+async def run_maintenance() -> None:
+    """Retention (spec 5.5) and handover expiry (spec 5.4); each step commits on its own."""
+    settings = get_settings()
+    async with AsyncSessionLocal() as db:
+        expired_codes = await expire_stale_handovers(db)
+        expired_reports = await expire_unclaimed_reports(
+            db, retention_days=settings.RETENTION_UNCLAIMED_FOUND_DAYS
+        )
+        purged_images = await purge_closed_images(
+            db, purge_days=settings.RETENTION_CLOSED_IMAGE_DAYS
+        )
+    logger.info(
+        "maintenance: %d handovers expired, %d reports expired, %d images purged",
+        expired_codes,
+        expired_reports,
+        purged_images,
+    )
+
+
 async def run_worker_loop() -> None:
-    """Idle worker loop for walking skeleton."""
-    logger.info("Smart Campus Lost and Found worker started (walking skeleton mode).")
+    settings = get_settings()
+    worker_id = f"{socket.gethostname()}:{os.getpid()}"
+    logger.info("Loading embedding backend '%s'...", settings.EMBEDDING_BACKEND)
+    embedder = get_embedder()  # fail fast at startup if baked model weights are missing
+    logger.info("Worker %s started.", worker_id)
+
+    last_maintenance = 0.0
     while running:
-        # In Step 6+, jobs will be claimed with FOR UPDATE SKIP LOCKED
-        await asyncio.sleep(2)
+        try:
+            await write_heartbeat(worker_id)
+            if time.monotonic() - last_maintenance >= settings.WORKER_MAINTENANCE_INTERVAL_SECONDS:
+                await run_maintenance()
+                last_maintenance = time.monotonic()
+            claimed = await process_available_jobs(AsyncSessionLocal, embedder, worker_id)
+        except Exception as exc:  # keep the loop alive; the error type is enough to debug
+            logger.error("worker iteration failed: %s", type(exc).__name__)
+            claimed = 0
+        if claimed == 0:
+            await asyncio.sleep(settings.WORKER_POLL_SECONDS)
     logger.info("Worker stopped.")
 
 

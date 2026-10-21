@@ -32,6 +32,8 @@ services:
       - SMTP_HOST=mail
       - SMTP_PORT=1025
       - CORS_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
+      - SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL:-}
+      - SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD:-}
     volumes:
       - ./backend:/app
       - ./eval:/app/eval
@@ -56,6 +58,7 @@ services:
     command: ["python", "-m", "app.worker.main"]
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
+      - EMBEDDING_BACKEND=${EMBEDDING_BACKEND:-model}
       - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-campus_user}:${POSTGRES_PASSWORD:-campus_secure_password}@db:5432/${POSTGRES_DB:-campus_lost_and_found}
       - SYNC_DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-campus_user}:${POSTGRES_PASSWORD:-campus_secure_password}@db:5432/${POSTGRES_DB:-campus_lost_and_found}

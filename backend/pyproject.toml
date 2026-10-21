@@ -25,6 +25,8 @@ dependencies = [
 pythonpath = ["."]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = ["slow: uses the real baked models (run with `pytest -m slow` in the backend image)"]
+addopts = "-m 'not slow'"
 
 [tool.ruff]
 line-length = 100

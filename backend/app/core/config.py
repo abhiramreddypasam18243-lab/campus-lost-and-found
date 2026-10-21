@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -50,11 +51,19 @@ class Settings(BaseSettings):
     RETENTION_CLOSED_CLAIM_EVIDENCE_DAYS: int = 30
     RETENTION_AUDIT_LOG_DAYS: int = 365
 
-    # ML Models
+    # ML Models (D4: weights baked into the image under MODEL_DIR; versions are pinned HF revisions)
+    # "standin" = deterministic hash vectors for the fast test suite; "model" = the real models (worker)
+    EMBEDDING_BACKEND: Literal["standin", "model"] = "standin"
+    MODEL_DIR: str = "/models"
     TEXT_MODEL_NAME: str = "all-MiniLM-L6-v2"
-    TEXT_MODEL_VERSION: str = "v1"
-    CLIP_MODEL_NAME: str = "ViT-B/32"
-    CLIP_MODEL_VERSION: str = "v1"
+    TEXT_MODEL_VERSION: str = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+    CLIP_MODEL_NAME: str = "clip-ViT-B-32"
+    CLIP_MODEL_VERSION: str = "327ab6726d33c0e22f920c83f2ff9e4bd38ca37f"
+
+    # Worker
+    WORKER_POLL_SECONDS: float = 2.0
+    WORKER_HEARTBEAT_STALE_SECONDS: int = 60
+    WORKER_MAINTENANCE_INTERVAL_SECONDS: int = 3600
 
     # Security & CORS
     CORS_ORIGINS_RAW: str = Field(

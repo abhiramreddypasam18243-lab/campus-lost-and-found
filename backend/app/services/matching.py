@@ -19,6 +19,7 @@ from app.domain.matching import (
 from app.models.embeddings import ImageEmbedding, ModelRegistry, TextEmbedding
 from app.models.matching import MatchCandidate, MatchFeedback
 from app.models.report import ItemImage, ItemReport
+from app.services.embeddings import CLIP_TEXT_MODEL_SUFFIX
 from app.services.location import calculate_db_location_score
 from app.services.notification import create_notification
 
@@ -125,15 +126,15 @@ async def compute_matches_for_report(
         lost_text_emb = (await db.execute(lost_text_stmt)).scalar_one_or_none()
         found_text_emb = (await db.execute(found_text_stmt)).scalar_one_or_none()
 
-        text_score: float | None = None
-        if (
-            lost_text_emb
-            and found_text_emb
-            and lost_text_emb.vector is not None
-            and found_text_emb.vector is not None
-        ):
-            cosine = _dot_product(lost_text_emb.vector, found_text_emb.vector)
-            text_score = calculate_text_score(cosine)
+        # Every report has a title and description, so a missing text vector means its
+        # embedding job has not run yet, not that the signal is unavailable. Skip the pair
+        # until both exist: the later job re-scores it, so no premature score or notification
+        # is produced from location and time alone.
+        if lost_text_emb is None or found_text_emb is None:
+            continue
+        text_score: float | None = calculate_text_score(
+            _dot_product(lost_text_emb.vector, found_text_emb.vector)
+        )
 
         # 2. Image signal (AC-55)
         lost_img_stmt = (
@@ -166,9 +167,24 @@ async def compute_matches_for_report(
                                 max_cos = cos
                 image_score = calculate_text_score(max_cos)
             else:
-                # Text-to-image similarity
-                # If one side has photos, compute text-to-image cross similarity (or stand-in)
-                image_score = 0.65 if text_score is None else min(1.0, text_score * 0.9)
+                # Text-to-image (spec 6.2): the CLIP text vector of the report without photos
+                # against the other report's CLIP photo vectors, best pair. If that text vector
+                # has not been computed yet the signal is missing (null), never guessed.
+                text_side = found if lost_img_embs else lost
+                photo_embs = lost_img_embs if lost_img_embs else found_img_embs
+                clip_text_stmt = select(ImageEmbedding).where(
+                    ImageEmbedding.entity_id == text_side.id,
+                    ImageEmbedding.model_name.endswith(CLIP_TEXT_MODEL_SUFFIX),
+                )
+                clip_text_embs = list((await db.execute(clip_text_stmt)).scalars().all())
+                if clip_text_embs:
+                    image_score = calculate_text_score(
+                        max(
+                            _dot_product(t_emb.vector, p_emb.vector)
+                            for t_emb in clip_text_embs
+                            for p_emb in photo_embs
+                        )
+                    )
 
         # 3. Location signal (AC-18)
         location_score = await calculate_db_location_score(db, lost.location_id, found.location_id)
@@ -251,12 +267,16 @@ async def compute_matches_for_report(
 
     await db.flush()
 
+    # Each candidate must be tied to its own reports, not the loop's last counterpart.
+    reports_by_id = {r.id: r for r in counterparts}
+    reports_by_id[target.id] = target
+
     # Sort deterministically: score DESC, then found created_at ASC, then found ID ASC (AC-57)
     sortable = [
         {
             "candidate": c,
             "score": c.combined_score,
-            "found_created_at": counterpart.created_at,
+            "found_created_at": reports_by_id[c.found_id].created_at,
             "found_id": c.found_id,
         }
         for c in persisted_candidates
@@ -268,8 +288,8 @@ async def compute_matches_for_report(
     for cand in ordered_candidates[:3]:
         if cand.combined_score >= 0.65:
             # Notify the lost report owner
-            lost_obj = lost_report if is_lost else cand.lost_report or counterpart
-            found_obj = counterpart if is_lost else found_report
+            lost_obj = reports_by_id[cand.lost_id]
+            found_obj = reports_by_id[cand.found_id]
             event_key = f"match_suggested:{cand.lost_id}:{cand.found_id}"
             payload = {
                 "category": found_obj.category,

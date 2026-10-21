@@ -22,4 +22,5 @@ This log records the core design and architectural decisions made for the Smart 
 | **D-16** | 2026-10-18 | **Credentials over TLS beyond localhost** | Plain HTTP on intranet | Prevents credential and session sniffing over local campus Wi-Fi networks. |
 | **D-17** | 2026-10-18 | **Email-only identity with campus domain restriction** | Collecting phone numbers or student IDs | Adheres to strict data minimization principles. |
 | **D-18** | 2026-10-20 | **Automated face and license plate blurring in photo pipeline** | Unredacted photo storage; external cloud vision APIs | Protects bystander and student privacy by smoothing sensitive biometric and vehicle zones before disk persistence without leaking images to third-party APIs. |
+| **D-19** | 2026-10-21 | **A report's CLIP text vector is stored in `image_embeddings` (entity = report id, model name `clip-ViT-B-32:text`) and drives the text-to-image signal** | A new table; computing CLIP text vectors at match time | Same 512-d space and HNSW index as photo vectors, no schema change, and matching stays a pure vector comparison; photo vectors are told apart because they join to `item_images`. |
 

@@ -734,6 +734,7 @@ The benchmark generator, the metrics and the statistics in step 12 depend only o
 | D-16 | 2026-10-18 | Credentials only over TLS beyond localhost, with a private certificate authority | Plain HTTP on the network | Passwords and sessions must not be readable on the network |
 | D-17 | 2026-10-18 | Email-only identity with a campus-domain restriction | Collect phone numbers or student IDs | Data minimisation |
 | D-18 | 2026-10-20 | Automated face and license plate blurring in photo pipeline | Unredacted photo storage; external cloud vision APIs | Protects bystander and student privacy by smoothing sensitive biometric and vehicle zones before disk persistence without leaking images to third-party APIs |
+| D-19 | 2026-10-21 | A report's CLIP text vector is stored in `image_embeddings` (entity = report id, model name `clip-ViT-B-32:text`) and drives the text-to-image signal | A new table; computing CLIP text vectors at match time | Same 512-d space as photo vectors, no schema change, matching stays a pure vector comparison |
 
 ## 21. Open Questions
 

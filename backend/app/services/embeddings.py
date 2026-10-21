@@ -1,13 +1,17 @@
 import hashlib
 import math
+import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.embeddings import ModelRegistry, TextEmbedding
+from app.models.embeddings import ImageEmbedding, ModelRegistry, TextEmbedding
 from app.models.jobs import BackgroundJob
 from app.models.report import ItemReport
+
+# A report's CLIP text vector lives in image_embeddings under "<clip model name>:text".
+CLIP_TEXT_MODEL_SUFFIX = ":text"
 
 
 def utc_now() -> datetime:
@@ -44,15 +48,58 @@ def generate_standin_image_embedding(seed: str, dimension: int = 512) -> list[fl
     return _l2_normalize(values)
 
 
+def report_embedding_text(report: ItemReport) -> str:
+    """Spec 6.2: the text signal embeds category + title + description (public fields only)."""
+    return f"{report.category} {report.title} {report.description}"
+
+
+async def upsert_image_space_embedding(
+    db: AsyncSession,
+    entity_id: uuid.UUID,
+    model_name: str,
+    model_version: str,
+    vector: list[float],
+) -> ImageEmbedding:
+    """Idempotently store a 512-d CLIP-space vector (AC-48).
+
+    Photo vectors use an `item_images.id` as entity; a report's CLIP *text* vector (for the
+    text-to-image signal, spec 6.2) uses the report id and a model name ending in `:text`.
+    """
+    stmt = select(ImageEmbedding).where(
+        ImageEmbedding.entity_id == entity_id,
+        ImageEmbedding.model_name == model_name,
+        ImageEmbedding.model_version == model_version,
+    )
+    existing = (await db.execute(stmt)).scalar_one_or_none()
+    if existing is not None:
+        existing.vector = vector
+        return existing
+
+    emb = ImageEmbedding(
+        entity_id=entity_id,
+        model_name=model_name,
+        model_version=model_version,
+        dimension=len(vector),
+        vector=vector,
+    )
+    db.add(emb)
+    return emb
+
+
 async def upsert_report_text_embedding(
     db: AsyncSession,
     report: ItemReport,
     model_name: str = "all-MiniLM-L6-v2",
     model_version: str = "v1.0",
+    vector: list[float] | None = None,
 ) -> TextEmbedding:
-    """Idempotently compute and store a text embedding for a report (AC-48, AC-49)."""
-    content = f"{report.category} {report.title} {report.description}"
-    vector = generate_standin_text_embedding(content, dimension=384)
+    """Idempotently compute and store a text embedding for a report (AC-48, AC-49).
+
+    `vector` is the model output computed by the worker; without it a stand-in is used.
+    """
+    content = report_embedding_text(report)
+    if vector is None:
+        vector = generate_standin_text_embedding(content, dimension=384)
 
     stmt = select(TextEmbedding).where(
         TextEmbedding.entity_id == report.id,

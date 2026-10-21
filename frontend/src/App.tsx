@@ -128,6 +128,7 @@ export const App: React.FC = () => {
   const [loginPassword, setLoginPassword] = useState<string>('')
   const [loginLoading, setLoginLoading] = useState<boolean>(false)
   const [loginError, setLoginError] = useState<string | null>(null)
+  const [personaError, setPersonaError] = useState<string | null>(null)
 
   // Registration state
   const [registerName, setRegisterName] = useState<string>('')
@@ -281,39 +282,29 @@ export const App: React.FC = () => {
     }
   }, [activeTab])
 
-  // 3. 1-Click Persona Switcher
+  // 3. 1-Click Persona Switcher (synthetic seeded demo accounts only; a failed login is an error, never a local session)
   const handleSwitchPersona = async (email: string, pass: string) => {
     setLoginLoading(true)
+    setPersonaError(null)
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: pass }),
       })
-      if (res.ok) {
-        const data = await res.json()
-        setCurrentUser(data.user)
-        if (data.csrf_token) {
-          setCsrfToken(data.csrf_token)
-        }
-      } else {
-        // Fallback local session for seamless demoing
-        const role = email.includes('admin') || email.includes('abhiram') ? 'admin' : email.includes('mod') ? 'moderator' : 'student'
-        setCurrentUser({
-          id: `usr-${Date.now()}`,
-          email,
-          display_name: email.split('@')[0],
-          role,
-        })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail?.message || 'Sign-in failed. Has the demo data been seeded?')
       }
-    } catch {
-      const role = email.includes('admin') || email.includes('abhiram') ? 'admin' : email.includes('mod') ? 'moderator' : 'student'
-      setCurrentUser({
-        id: `usr-${Date.now()}`,
-        email,
-        display_name: email.split('@')[0],
-        role,
-      })
+      const data = await res.json()
+      setCurrentUser(data.user)
+      if (data.csrf_token) {
+        setCsrfToken(data.csrf_token)
+      }
+    } catch (err) {
+      setCurrentUser(null)
+      setCsrfToken(null)
+      setPersonaError(err instanceof Error ? err.message : 'Sign-in failed.')
     } finally {
       setLoginLoading(false)
     }
@@ -364,8 +355,8 @@ export const App: React.FC = () => {
       setRegisterError('Passwords do not match.')
       return
     }
-    if (registerPassword.length < 8) {
-      setRegisterError('Password must be at least 8 characters.')
+    if (registerPassword.length < 12 || registerPassword.length > 128) {
+      setRegisterError('Password must be 12 to 128 characters.')
       return
     }
 
@@ -554,16 +545,16 @@ export const App: React.FC = () => {
           <span className="persona-label">⚡ 1-Click Demo Accounts:</span>
           <button
             type="button"
-            className={`persona-btn ${currentUser?.email === 'abhiramr@iisc.ac.in' ? 'active' : ''}`}
-            onClick={() => handleSwitchPersona('abhiramr@iisc.ac.in', 'Abhiram@IISc2026!')}
-            title="Log in as Abhiram R (Admin)"
+            className={`persona-btn ${currentUser?.email === 'admin@campus.edu' ? 'active' : ''}`}
+            onClick={() => handleSwitchPersona('admin@campus.edu', 'CampusAdmin2026!')}
+            title="Log in as the synthetic demo admin"
           >
-            👑 Abhiram (Admin)
+            👑 Admin
           </button>
           <button
             type="button"
             className={`persona-btn ${currentUser?.email === 'student1@campus.edu' ? 'active' : ''}`}
-            onClick={() => handleSwitchPersona('student1@campus.edu', 'Student1Pass123!')}
+            onClick={() => handleSwitchPersona('student1@campus.edu', 'StudentPass2026!')}
             title="Log in as Student"
           >
             🧑‍🎓 Student
@@ -571,7 +562,7 @@ export const App: React.FC = () => {
           <button
             type="button"
             className={`persona-btn ${currentUser?.email === 'moderator@campus.edu' ? 'active' : ''}`}
-            onClick={() => handleSwitchPersona('moderator@campus.edu', 'Moderator1Pass123!')}
+            onClick={() => handleSwitchPersona('moderator@campus.edu', 'CampusMod2026!')}
             title="Log in as Desk Staff / Moderator"
           >
             🛡️ Moderator
@@ -591,6 +582,13 @@ export const App: React.FC = () => {
           )}
         </div>
       </div>
+
+      {personaError && (
+        <div className="banner-notice" role="alert" style={{ background: 'rgba(244, 63, 94, 0.15)', borderColor: 'rgba(244, 63, 94, 0.3)', color: '#fecdd3' }}>
+          <span>⚠️</span>
+          <span>{personaError}</span>
+        </div>
+      )}
 
       {/* Share Toast Notification */}
       {shareToast && (
@@ -1525,7 +1523,7 @@ export const App: React.FC = () => {
                     type="email"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="e.g. abhiramr@iisc.ac.in or student@campus.edu"
+                    placeholder="e.g. student@campus.edu"
                     required
                   />
                 </div>
@@ -1560,7 +1558,7 @@ export const App: React.FC = () => {
                     type="text"
                     value={registerName}
                     onChange={(e) => setRegisterName(e.target.value)}
-                    placeholder="Abhiram R"
+                    placeholder="Your name (optional)"
                     required
                   />
                 </div>
@@ -1571,7 +1569,7 @@ export const App: React.FC = () => {
                     type="email"
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
-                    placeholder="e.g. abhiramr@iisc.ac.in or student@college.edu"
+                    placeholder="e.g. student@campus.edu"
                     required
                   />
                 </div>

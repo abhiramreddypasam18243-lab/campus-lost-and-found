@@ -37,3 +37,12 @@ class BackgroundJob(Base):
     )
 
     __table_args__ = (Index("ix_jobs_status_run_after", "status", "run_after"),)
+
+
+class WorkerHeartbeat(Base):
+    """Last time each worker process was alive (D5: /api/health reports worker status)."""
+
+    __tablename__ = "worker_heartbeats"
+
+    worker_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

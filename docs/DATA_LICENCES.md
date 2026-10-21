@@ -8,10 +8,17 @@ This document records the licences, origins, and permissions for all datasets, m
 
 | Component | Model Name / Identifier | Source Repository / Provider | Licence | Intended Use & Modifications |
 | :--- | :--- | :--- | :--- | :--- |
-| **Text Embedding Model** | `all-MiniLM-L6-v2` | [HuggingFace / sentence-transformers](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | **Apache 2.0** | Semantic embedding of lost & found titles and descriptions (384-dimensional dense vectors). Offline inference only. |
-| **Vision-Text Model** | `clip-ViT-B-32` | [OpenAI / HuggingFace](https://huggingface.co/openai/clip-vit-base-patch32) | **MIT Licence** | Zero-shot visual representation and cross-modal embedding of item photographs (512-dimensional dense vectors). Offline inference only. |
+| **Text Embedding Model** | `all-MiniLM-L6-v2` | [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | **Apache 2.0** | Semantic embedding of lost & found titles and descriptions (384-dimensional dense vectors). Offline inference only. |
+| **Vision-Text Model** | `clip-ViT-B-32` | [sentence-transformers/clip-ViT-B-32](https://huggingface.co/sentence-transformers/clip-ViT-B-32) (wrapper of OpenAI CLIP ViT-B/32) | **MIT Licence** (OpenAI CLIP) | Image vectors and cross-modal text vectors in one 512-dimensional space. Offline inference only. |
 
-Both models are baked into container images or cached locally, requiring zero network egress during runtime execution (**AC-139**).
+**Pinned revisions and checksums** (source of truth: `backend/models.lock.json`; the Docker build fails on any mismatch):
+
+| Model | Hugging Face revision | Verified file | SHA-256 |
+| :--- | :--- | :--- | :--- |
+| `all-MiniLM-L6-v2` | `1110a243fdf4706b3f48f1d95db1a4f5529b4d41` | `model.safetensors` | `53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db` |
+| `clip-ViT-B-32` | `327ab6726d33c0e22f920c83f2ff9e4bd38ca37f` | `0_CLIPModel/model.safetensors` | `99d28a652e6ec46629ab7047a0ac82c69b1fe11e0ce672c43af65d3a9a3fc05d` |
+
+Both models are downloaded once during `docker build` by `backend/scripts/fetch_models.py` into `/models` and baked into the backend/worker image. Containers run with `HF_HUB_OFFLINE=1`, so no model download happens at runtime (**AC-139**). The fast test suite uses deterministic stand-in vectors (`EMBEDDING_BACKEND=standin`) and never loads the models.
 
 ---
 

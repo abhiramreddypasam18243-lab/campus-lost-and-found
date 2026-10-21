@@ -36,96 +36,22 @@ router = APIRouter(prefix="/api", tags=["auth"])
 settings = get_settings()
 
 
-def is_valid_college_domain(domain: str) -> bool:
-    """Validate that the domain belongs to a university, college, or institutional campus."""
-    d = domain.lower().strip()
-    allowed_list = [item.lower().strip() for item in settings.ALLOWED_EMAIL_DOMAINS]
-
-    if "*" in allowed_list or d in allowed_list:
-        return True
-
-    # Block common free personal email providers
-    blocked_providers = {
-        "gmail.com",
-        "yahoo.com",
-        "yahoo.co.in",
-        "hotmail.com",
-        "outlook.com",
-        "live.com",
-        "icloud.com",
-        "aol.com",
-        "proton.me",
-        "protonmail.com",
-        "zoho.com",
-        "mail.com",
-        "yandex.com",
-        "gmx.com",
-    }
-    if d in blocked_providers:
-        return False
-
-    # Institutional & Academic suffixes globally (.ac.in, .edu.in, .edu, .ac.uk, etc.)
-    academic_suffixes = (
-        ".edu",
-        ".ac.in",
-        ".edu.in",
-        ".res.in",
-        ".ac.uk",
-        ".edu.au",
-        ".ac.nz",
-        ".edu.sg",
-        ".edu.cn",
-        ".ac.za",
-        ".ac.jp",
-        ".edu.my",
-        ".edu.hk",
-        ".ac.kr",
-        ".edu.pk",
-        ".edu.ph",
-        ".ac.th",
-        ".edu.bd",
-        ".edu.eg",
-        ".edu.ng",
-        ".ac.be",
-        ".ac.at",
-        ".ac.il",
-        ".ac.rs",
-        ".ac.rw",
-        ".edu.co",
-        ".edu.mx",
-        ".edu.br",
-        ".edu.ar",
-        ".edu.tr",
-        ".edu.sa",
-        ".edu.qa",
-    )
-    if any(d.endswith(suffix) for suffix in academic_suffixes):
-        return True
-
-    # Common college naming keywords (e.g. xyzcollege.org, abcuniv.org)
-    institutional_keywords = ("campus", "univ", "college", "institute", "academy", "school")
-    if any(kw in d for kw in institutional_keywords):
-        return True
-
-    return False
-
-
 @router.post("/auth/register", status_code=status.HTTP_201_CREATED)
 async def register(
     req: RegisterRequest,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
-    """AC-01: Register user with allowed campus or college email domain."""
+    """AC-01: Register user with an email in ALLOWED_EMAIL_DOMAINS (exact domain match)."""
     email_clean = req.email.strip().lower()
     domain = email_clean.split("@")[-1]
 
-    # Validate institutional/college email domain
-    if not is_valid_college_domain(domain):
+    # Validate campus email domain (P5: exact match against the configured whitelist)
+    if domain not in settings.ALLOWED_EMAIL_DOMAINS:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "email_domain_not_allowed",
-                "message": f"Domain '@{domain}' is not recognized as an institutional or college email. Please use your official university email (e.g. .edu, .ac.in, .edu.in).",
+                "message": f"Domain '@{domain}' is not allowed.",
             },
         )
 

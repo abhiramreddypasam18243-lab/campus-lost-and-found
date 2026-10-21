@@ -426,6 +426,20 @@ This log tracks the build rationale, architectural decisions, failure modes, and
   2. *How does Gaussian smoothing inside a localized bounding box reduce edge variance while preserving overall image layout and perceptual dHash stability?*
   3. *Why must the privacy blurring logic reside in the pure domain layer without external cloud computer vision dependencies?*
 
+---
+
+## Fix pass 1 (2026-10-21): Security regressions reverted and real models in the worker
+
+* **What was built:**
+  * **Email domains (AC-01, P5):** registration is again an exact match against `ALLOWED_EMAIL_DOMAINS`. The keyword heuristic (any domain containing "campus", "school", "univ", or ending in `.edu`/`.ac.in`) was removed; `evilcampus.com` and `campus.edu.attacker.net` are now rejected by a parametrised test.
+  * **Seed and demo accounts:** the personal admin account and its password were removed from `seed.py` and the frontend bundle. An optional admin comes from `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` in `.env`. The 1-click buttons use the synthetic seeded accounts with their real passwords, and a failed login now shows an error instead of creating a fake client-side session with a guessed role.
+  * **Real embeddings (spec 6.1, D4):** `app/services/embedder.py` has a `ModelEmbedder` (all-MiniLM-L6-v2 for text, CLIP ViT-B/32 for photos and cross-modal text) and a `StandinEmbedder` (hash vectors) for the fast tests. Weights are fetched at `docker build` from pinned Hugging Face revisions, checked against SHA-256 values in `backend/models.lock.json`, and baked into `/models`; containers run with `HF_HUB_OFFLINE=1`.
+  * **A worker that works:** the worker was still the step-1 idle loop, and `compute_matches_for_report` was never called outside tests. `app/services/job_runner.py` now claims jobs (`FOR UPDATE SKIP LOCKED`), runs each in its own transaction, embeds, then re-scores the report; failures back off as in AC-47. The worker also runs handover expiry and retention hourly and writes a heartbeat, which `/api/health` reads (`ok`, `stale` or `unknown` instead of a hardcoded `ok`).
+  * **Text-to-image signal:** the old code returned `0.65` or `text_score * 0.9`. It now compares the CLIP text vector of the report without photos against the other report's photo vectors (D-19).
+  * **Matching bugs found once the worker ran:** candidates used the loop's last counterpart for the tie-break (AC-57) and, when a found report triggered matching, the notification could go to the wrong lost-report owner. A pair is also no longer scored until both text embeddings exist, so no notification is sent from location and time alone.
+* **Why it is designed that way:** tests must stay fast and deterministic (stand-ins), while the deployed system must be real and offline (baked, checksummed weights). Keeping torch out of `requirements.txt` means CI does not download it; only the image does.
+* **One thing that could go wrong:** CLIP text-to-image cosines are small in absolute terms (about 0.25 to 0.35 even for a correct pair), so with `max(0, cos)` the text-to-image signal pulls hybrid scores down. The weights and bins should be re-tuned on the development set before relying on them.
+
 
 
 

@@ -19,6 +19,7 @@ from app.core.security import (
     hash_password,
     hash_token,
     login_rate_limiter,
+    request_is_tls,
     verify_dummy_password,
     verify_password,
 )
@@ -227,7 +228,7 @@ async def login(
     await db.commit()
 
     # Set HttpOnly, SameSite=Lax cookie (Secure over TLS)
-    is_tls = request.url.scheme == "https" or settings.ENVIRONMENT == "production"
+    is_tls = request_is_tls(request) or settings.ENVIRONMENT == "production"
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=raw_session_token,

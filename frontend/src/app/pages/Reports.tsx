@@ -185,9 +185,12 @@ export function ReportFormPage({ initialType }: { initialType: 'lost' | 'found' 
         )
       navigate(`/reports/${report.id}`)
     } catch (err) {
-      if (err instanceof ApiError && Object.keys(err.fields).length) {
+      if (err instanceof ApiError && err.code === 'pii_detected') {
+        const field = String(err.details.field ?? 'title')
+        setFields({ [field]: 'Remove phone numbers, email addresses and long numbers from this field.' })
+        setError(err)
+      } else if (err instanceof ApiError && Object.keys(err.fields).length) {
         setFields(err.fields)
-        if (err.code === 'pii_detected') setError(err)
       } else {
         setError(err)
       }

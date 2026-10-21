@@ -79,6 +79,14 @@ class Settings(BaseSettings):
 
     SESSION_MAX_AGE_SECONDS: int = 604800  # 7 days
 
+    # SEC7: only these hosts may vouch for the client's protocol (X-Forwarded-Proto) and network
+    # (X-Client-Network). Hostnames are resolved per request. The compose frontend is "frontend".
+    TRUSTED_PROXIES_RAW: str = Field(default="frontend", validation_alias="TRUSTED_PROXIES")
+
+    @property
+    def TRUSTED_PROXIES(self) -> list[str]:
+        return [p.strip() for p in self.TRUSTED_PROXIES_RAW.split(",") if p.strip()]
+
 
 @lru_cache
 def get_settings() -> Settings:

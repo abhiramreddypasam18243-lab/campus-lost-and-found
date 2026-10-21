@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+import socket
 import time
 from datetime import UTC, datetime
 
@@ -99,26 +100,74 @@ class LoginRateLimiter:
 login_rate_limiter = LoginRateLimiter(max_attempts=5, window_seconds=900)
 
 
+LOCALHOST_NAMES = ("127.0.0.1", "localhost", "::1", "testclient", "testserver")
+
+
+_PROXY_CACHE_SECONDS = 30.0
+_proxy_cache: tuple[float, tuple[str, ...], set[str]] | None = None
+
+
+def _trusted_proxy_addresses() -> set[str]:
+    """Addresses of the configured reverse proxies (SEC7).
+
+    Hostnames are re-resolved every 30 seconds, because a container gets a new address when it
+    is recreated; the short cache keeps a slow or failing DNS lookup off every request.
+    """
+    global _proxy_cache
+    names = tuple(settings.TRUSTED_PROXIES)
+    now = time.monotonic()
+    if _proxy_cache and _proxy_cache[1] == names and now - _proxy_cache[0] < _PROXY_CACHE_SECONDS:
+        return _proxy_cache[2]
+    addresses: set[str] = set(names)
+    for entry in names:
+        try:
+            for info in socket.getaddrinfo(entry, None):
+                addresses.add(str(info[4][0]))
+        except OSError:
+            continue
+    _proxy_cache = (now, names, addresses)
+    return addresses
+
+
+def request_is_tls(request: Request) -> bool:
+    """True if the client's connection to us was encrypted.
+
+    Either the request reached this process over HTTPS, or it came through a configured proxy
+    that says so. Forwarded headers from any other address are ignored (AC-07).
+    """
+    if request.url.scheme == "https":
+        return True
+    client_host = request.client.host if request.client else ""
+    if client_host in LOCALHOST_NAMES:
+        return False
+    if client_host in _trusted_proxy_addresses():
+        return request.headers.get("X-Forwarded-Proto", "").lower() == "https"
+    return False
+
+
+def request_is_local(request: Request) -> bool:
+    """True for a client on this machine.
+
+    Directly: the socket peer is loopback. Through the proxy: its plain-HTTP listener is published
+    on 127.0.0.1 only (docker-compose.yml), and it sets `X-Client-Network: loopback` itself,
+    overwriting anything a client sent, so only a client on this machine can reach that listener.
+    """
+    client_host = request.client.host if request.client else ""
+    if client_host in LOCALHOST_NAMES:
+        return True
+    if client_host in _trusted_proxy_addresses():
+        return request.headers.get("X-Client-Network", "").lower() == "loopback"
+    return False
+
+
 def check_tls_requirement(request: Request) -> None:
-    """SEC7 & AC-07: Reject logins over plain HTTP from non-localhost clients."""
-    client_host = request.client.host if request.client else "127.0.0.1"
-    is_localhost = client_host in ("127.0.0.1", "localhost", "::1", "testclient", "testserver")
-
-    if not is_localhost:
-        # Check scheme or forwarded proto only from trusted proxy
-        scheme = request.url.scheme
-        forwarded_proto = request.headers.get("X-Forwarded-Proto")
-
-        is_proxy = client_host in ("127.0.0.1", "nginx", "frontend") or client_host.startswith("172.")
-        is_secure = scheme == "https" or (
-            is_proxy and (forwarded_proto == "https" or settings.ENVIRONMENT == "development")
-        )
-
-        if not is_secure:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "code": "tls_required",
-                    "message": "Credentials require TLS over the network.",
-                },
-            )
+    """SEC7 & AC-07: credentials are accepted only over TLS, or from this machine."""
+    if request_is_local(request) or request_is_tls(request):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "code": "tls_required",
+            "message": "Credentials require TLS over the network.",
+        },
+    )

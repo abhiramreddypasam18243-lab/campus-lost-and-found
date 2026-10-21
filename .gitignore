@@ -56,3 +56,7 @@ Thumbs.db
 uploads/
 data/
 *.sqlite3
+
+# TLS certificates and keys for docker-compose.lan.yml (never commit)
+certs/
+e2e/output/

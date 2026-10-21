@@ -146,17 +146,41 @@ npx tsc --noEmit
 npm run build
 ```
 
-There is no automated frontend test suite in the repository yet. The demo journey (AC-146) was run
-in Chromium with Playwright against the Compose stack on 2026-10-21, with an axe accessibility scan
-(no serious or critical violations on the login, browse, report, queue, matches, claim and
-dashboard pages) and no horizontal scrolling at 360 px.
+Browser end-to-end tests live in `e2e/` (see `e2e/README.md`) and run with `sh e2e/run.sh` against a
+freshly seeded stack: the full demo journey (AC-146) with an axe scan of eight pages (AC-126) and
+360 px layout checks (AC-127), and a keyboard-only report-and-claim flow that also checks every
+focused element has a visible focus indicator (AC-125). Both passed on 2026-10-21. They are not in
+CI yet, because CI would have to build the model-carrying backend image.
 
 ---
 
-## 7. Multi-Device Network Testing (AC-142, AC-143)
+## 7. Using it from a phone: HTTPS on the local network (AC-142, AC-143)
 
-**Not yet done for this stack.** `docker-compose.yml` defines no TLS reverse proxy, so the HTTPS
-check from a second device (D7) has to be set up and recorded here: date, device, and result.
+All published ports are bound to `127.0.0.1`, so the database, API, mail catcher and the
+plain-HTTP site are reachable only from this machine. Other devices use HTTPS on port 8443:
+
+```bash
+# once: create a local certificate authority and a certificate for this machine's LAN address
+mkcert -install
+mkdir -p certs
+mkcert -cert-file certs/campus.pem -key-file certs/campus-key.pem <LAN-IP> localhost
+
+# start with the HTTPS listener
+APP_BASE_URL=https://<LAN-IP>:8443 docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d --build
+```
+
+On the phone, install and trust mkcert's root certificate (`mkcert -CAROOT` shows where
+`rootCA.pem` is), then open `https://<LAN-IP>:8443`. `certs/` is git-ignored; never commit keys.
+
+How the TLS rule works (SEC7, D-21): the backend accepts a login only over TLS or from this
+machine, and believes `X-Forwarded-Proto` / `X-Client-Network` only from the configured proxy
+(`TRUSTED_PROXIES`, default `frontend`). nginx sets both headers itself on every request.
+
+Verified on 2026-10-21 against the Compose stack with a test certificate: login over HTTPS
+returns a `Secure` session cookie; TLS 1.1 is refused and TLS 1.2 / 1.3 accepted; HSTS is sent
+over HTTPS only; a container talking to the backend directly with forged headers gets 403.
+**Still to do by hand (AC-143):** sign in, report an item and see a notification from a real
+second device, then record the date, device and result here.
 
 ---
 

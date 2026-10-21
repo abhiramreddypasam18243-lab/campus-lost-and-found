@@ -222,16 +222,15 @@ Descriptions follow spec section 15. Status as of 2026-10-21.
 
 ## 14. UI, Accessibility & Architecture Gates (AC-124 to AC-137)
 
-UI checks were run on 2026-10-21 with Playwright (Chromium) against the Compose stack: the full
-demo journey, an axe scan of seven pages, and 360 × 740 layouts. The script is not yet in the
-repository, so these are recorded manual runs, not CI tests.
+UI checks are the browser tests in `e2e/` (Playwright, Chromium), run with `sh e2e/run.sh` against a
+freshly seeded Compose stack. Last passed 2026-10-21. Not yet in CI (the stack needs the model image).
 
 | AC ID | Requirement (spec) | Status | Verified by |
 | :--- | :--- | :--- | :--- |
 | **AC-124** | Loading, empty and error states; form errors linked with `aria-describedby` | Implemented | `frontend/src/app/ui.tsx` (`AsyncView`, field components) |
-| **AC-125** | Keyboard-only end-to-end test; visible focus everywhere | **Not automated** — focus styles in `styles.css`; no keyboard-only test yet | — |
-| **AC-126** | axe scan: no serious or critical violations on main pages | Pass (recorded run, 7 pages) | Playwright + axe-core 4.10.2 |
-| **AC-127** | No horizontal scroll at 360 × 740; photo field opens the camera | Pass (recorded run, 5 pages); `capture="environment"` on the photo input | Playwright |
+| **AC-125** | Keyboard-only end-to-end test; visible focus everywhere | Pass (33 focused elements, all with a visible indicator) | `e2e/keyboard.py` |
+| **AC-126** | axe scan: no serious or critical violations on main pages | Pass (8 pages) | `e2e/journey.py` (axe-core 4.10.2) |
+| **AC-127** | No horizontal scroll at 360 × 740; photo field opens the camera | Pass (5 pages); `capture="environment"` on the photo input | `e2e/journey.py` |
 | **AC-128** | Matches show score, bin, text explanation, "not mine", suggestion notice | Implemented and exercised in the recorded run | `frontend/src/app/pages/Reports.tsx` |
 | **AC-129** | Handover desk shows only success/failure and attempts left; never the code | Implemented and exercised (wrong code → "4 of 5", correct code → complete; code never on the desk page) | `frontend/src/app/pages/Moderation.tsx` |
 | **AC-130** | Moderation queue: pending reports, duplicate-image flags, claims with lock status | Implemented | `frontend/src/app/pages/Moderation.tsx` |
@@ -253,8 +252,8 @@ repository, so these are recorded manual runs, not CI tests.
 | **AC-139** | Offline models: System operates without outbound network access | Container Config | [`backend/Dockerfile`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/Dockerfile) |
 | **AC-140** | `/api/health` returns 200 with db/worker status; non-root user execution | Docker / API Test | [`backend/app/api/health.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/app/api/health.py) |
 | **AC-141** | Data volume persistence across `docker compose down` and `up` | Docker Volume Test | Volumes `db_data` and `image_data` in [`docker-compose.yml`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/docker-compose.yml) |
-| **AC-142** | Reverse proxy TLS termination at `:8443` supporting TLS 1.2+ | **Not done** — `frontend/nginx.conf` listens on port 80 only | — |
-| **AC-143** | Multi-device network test on local network documented | **Not done** — no TLS proxy in `docker-compose.yml`; README section 7 | — |
+| **AC-142** | Reverse proxy TLS termination at `:8443` supporting TLS 1.2+ | Pass with a test certificate (TLS 1.1 refused; 1.2/1.3 accepted; Secure cookie; forged headers 403). Needs your mkcert certificate to use from a phone | `docker-compose.lan.yml`, `frontend/nginx/tls.conf`, `backend/tests/test_ac_07_tls_requirement.py` |
+| **AC-143** | Multi-device network test on local network documented | **Manual, not done yet** — needs a real second device; steps in README section 7 | — |
 | **AC-144** | Development emails routed to Mailpit at `:8025` / `:1025` | Integration Test | [`docker-compose.yml`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/docker-compose.yml) & Mailpit service |
 | **AC-145** | Seed command (`python -m app.seed`) populates synthetic campus tree and roles | CLI Execution Test | [`backend/app/seed.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/app/seed.py) |
 | **AC-146** | Full end-to-end demo journey executed in CI | Automated Test | [`backend/tests/test_ac_146_demo_journey.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_146_demo_journey.py) |

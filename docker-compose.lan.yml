@@ -1,0 +1,18 @@
+# HTTPS for other devices on the same network (D7, AC-142).
+#
+#   mkcert -install
+#   mkcert -cert-file certs/campus.pem -key-file certs/campus-key.pem <LAN-IP> localhost
+#   docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d --build
+#
+# Then open https://<LAN-IP>:8443 on a device that trusts the mkcert root CA (README).
+# Plain HTTP stays on 127.0.0.1:8080 for this machine only.
+services:
+  frontend:
+    ports:
+      - "8443:443"
+    volumes:
+      - ./frontend/nginx/tls.conf:/etc/nginx/conf.d/tls.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+  backend:
+    environment:
+      - APP_BASE_URL=${APP_BASE_URL:-https://localhost:8443}

@@ -100,7 +100,9 @@ class TuningHarness:
             if best is None or key > (best[0], -best[1]):
                 best = (score, distance, w)
         assert best is not None
-        initial_mrr = mrr(ranks_from_scores(self.items, self.pool, hybrid_matrix(signals, INITIAL_WEIGHTS)))
+        initial_mrr = mrr(
+            ranks_from_scores(self.items, self.pool, hybrid_matrix(signals, INITIAL_WEIGHTS))
+        )
         return {
             "weights": {k: round(v, 2) for k, v in best[2].items()},
             "dev_mrr": best[0],
@@ -153,7 +155,7 @@ class TuningHarness:
 
 def load_frozen_config(path: Path) -> dict[str, Any]:
     """Load the frozen configuration and verify its hash has not been edited."""
-    frozen = json.loads(path.read_text())
+    frozen: dict[str, Any] = json.loads(path.read_text())
     stated = frozen.pop("config_hash")
     actual = hashlib.sha256(json.dumps(frozen, sort_keys=True).encode()).hexdigest()
     if stated != actual:

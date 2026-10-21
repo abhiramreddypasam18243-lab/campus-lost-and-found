@@ -7,7 +7,7 @@ An accessible, privacy-preserving campus lost-and-found system featuring explain
 ## 1. Overview
 The platform combines a reliable campus operational workflow with a controlled retrieval research framework:
 * **Product:** Privacy-safe found item listings, hierarchical campus location tree, safe image pipeline (magic byte verification, pixel guards, EXIF metadata stripping, 64-bit dHash duplicate detection), moderator claim locks, single-use 8-character handover codes (HMAC-SHA256, 5-attempt lock, 48-hour expiry), transactional outbox notifications, and retention rules.
-* **Research:** Controlled evaluation comparing BM25 keyword search, text embeddings (`all-MiniLM-L6-v2`), CLIP ViT-B/32 image embeddings, hand-weighted hybrid, and learned fusion across 400 benchmark items with bootstrap confidence intervals and paired hypothesis testing ($H_1$).
+* **Research:** A seeded synthetic benchmark (300 items + 100 unclaimed, 70% held out) comparing BM25, text embeddings (`all-MiniLM-L6-v2`), a hand-weighted hybrid and learned fusion, with bootstrap confidence intervals, a pre-registered hypothesis (H1) and pgvector latency. Image retrieval is **not** evaluated: no photo subset has been collected (see section 5).
 
 ---
 
@@ -33,24 +33,20 @@ The system is designed as a clean modular monolith with dedicated background wor
 ### Launching the Stack
 1. **Configure Environment:**
    ```bash
-   cp .env.example .env
+   cp .env.example .env   # then set SECRET_KEY; optionally SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD
    ```
-2. **Build and Launch Services:**
+2. **Build and Launch Services** (the first build downloads the pinned model weights, about 700 MB, and verifies their checksums; migrations run automatically when the backend starts):
    ```bash
    docker compose up -d --build
    ```
-3. **Apply Database Migrations:**
-   ```bash
-   docker compose exec -T backend alembic upgrade head
-   ```
-4. **Seed Campus Tree, Users, and Demo Reports (AC-145):**
+3. **Seed Campus Tree, Users, and Demo Reports (AC-145):**
    ```bash
    docker compose exec -T backend python -m app.seed
    ```
-5. **Access Endpoints:**
+4. **Access Endpoints:**
    * **Web Application:** `http://localhost:8080`
    * **Backend API Documentation:** `http://localhost:8000/docs`
-   * **Mailpit (In-Development Mail Catcher):** `http://localhost:8025`
+   * **Mailpit (In-Development Mail Catcher):** `http://localhost:8025` (verification links and notification emails arrive here)
 
 ### Pre-seeded Demo Accounts
 All seeded accounts use standard campus credentials for demonstration:
@@ -84,45 +80,83 @@ docker compose exec -T backend pytest -q tests/test_ac_146_demo_journey.py
 
 ## 5. Research Benchmark Evaluation (AC-109 to AC-123)
 
-Run the reproducible offline benchmark pipeline:
+Run inside the backend image (the models are baked in, so this works offline):
 ```bash
-# 1. Generate seeded benchmark dataset (30% dev / 70% test split)
-python -m eval.generator --seed 42
+# 1. Tune on the development split only, then freeze and hash the configuration
+docker compose exec -T backend python -m eval.runner tune
 
-# 2. Run hyperparameter tuning on development split (leakage-guarded)
-python -m eval.protocol --split dev
+# 2. Write the hypotheses (eval/HYPOTHESES.md) and commit them with the frozen config
 
-# 3. Execute final evaluation runner on test set
-python -m eval.runner
+# 3. Evaluate the test split once (refuses to run again for the same frozen config)
+docker compose exec -T backend python -m eval.runner final
+
+# 4. Check reproducibility: re-runs and compares with the saved numbers
+docker compose exec -T backend python -m eval.runner final --reproduce
 ```
-Outputs are saved to `eval/benchmark_results.json` and `eval/benchmark_results.csv` and served via `GET /api/admin/evaluation`.
+Results: `eval/results/benchmark_results.json` and `.csv`, shown on the admin **Evaluation** page.
+
+### Results (seed 42, test split: 210 queries × 310 candidates, frozen config `b3cd1021…`)
+
+| System | MRR | 95% CI | Recall@1 | Recall@10 |
+| --- | --- | --- | --- | --- |
+| A: BM25 keyword | 0.120 | [0.090, 0.153] | 0.062 | 0.233 |
+| B: text embedding (MiniLM) | 0.342 | [0.293, 0.389] | 0.195 | 0.657 |
+| D: hand-weighted hybrid (text 0.40, location 0.30, time 0.30) | 0.959 | [0.938, 0.979] | 0.933 | 0.995 |
+| E: learned fusion (logistic regression) | 0.982 | [0.966, 0.994] | 0.971 | 1.000 |
+| C: image similarity | not evaluated — no photos collected | | | |
+
+**H1 (pre-registered): supported.** MRR(D) − MRR(B) = 0.618, paired-bootstrap 95% CI [0.568, 0.669].
+As stated in `eval/HYPOTHESES.md` before the run, most of this gap is **by construction**: the
+generator places location and time with the assumptions the scoring encodes, and spreads items over
+60 days while each item is found within hours. Removing time drops the hybrid to 0.739; removing
+location to 0.901; removing text to 0.878. The informative semantic result is text-only: MiniLM
+roughly triples BM25 (0.342 vs 0.120) when the two sides use different words.
+
+**Robustness:** location one level off for 25/50% of found reports: 0.966 / 0.961 (no meaningful
+change); time shifted 24 h for 25/50%: 0.931 / 0.919.
+
+**Latency (pgvector, random 384-d vectors, one machine):** exact top-10 p50 0.41 / 2.8 / 24.6 ms
+at 1k / 10k / 100k; HNSW p50 0.39 / 1.0 / 3.7 ms. HNSW recall@10 against exact search was
+0.99 / 0.30 / 0.06 — random isotropic vectors are a worst case for HNSW at the default
+`ef_search = 40`, so the speed-up came with a large loss of recall here. (The matching service
+currently scores candidates directly and does not depend on HNSW recall.)
+
+**Not evaluated / limitations:** no real-photo subset and no human-written subset have been
+collected (`eval/DATA_CARD.md`); results come from a synthetic benchmark and say nothing about
+real-world recovery rates.
 
 ---
 
 ## 6. Verification and Quality Gates
 
-Execute full checks across the entire stack:
 ```bash
-# Backend Quality Gates
+# Backend (inside the backend image or a Python 3.12 venv with PostgreSQL + pgvector)
 cd backend
 ruff check .
 mypy .
-alembic check
-pytest -v
+alembic upgrade head && alembic check
+pytest -q              # fast suite, stand-in embeddings
+pytest -q -m slow      # real models (inside the backend image)
 
-# Frontend Quality Gates
+# Frontend
 cd frontend
+npm run gen:api        # regenerate API types from src/api/openapi.json (CI checks for drift)
 npm run lint
 npx tsc --noEmit
-npm test
+npm run build
 ```
+
+There is no automated frontend test suite in the repository yet. The demo journey (AC-146) was run
+in Chromium with Playwright against the Compose stack on 2026-10-21, with an axe accessibility scan
+(no serious or critical violations on the login, browse, report, queue, matches, claim and
+dashboard pages) and no horizontal scrolling at 360 px.
 
 ---
 
 ## 7. Multi-Device Network Testing (AC-142, AC-143)
-* **Date Verified:** 2026-10-20
-* **Configuration:** Local network TLS reverse proxy configured at `https://<LAN-IP>:8443` with self-signed certificate and HTTP/2.
-* **Test Outcome:** Second device (mobile browser on same Wi-Fi subnet) successfully authenticated, submitted a report, and observed notifications without security warnings when trusting the local CA. Plain HTTP logins from non-localhost clients are strictly refused.
+
+**Not yet done for this stack.** `docker-compose.yml` defines no TLS reverse proxy, so the HTTPS
+check from a second device (D7) has to be set up and recorded here: date, device, and result.
 
 ---
 
@@ -132,7 +166,8 @@ npm test
 2. **Synthetic Benchmark Evaluation:** The research evaluation dataset is procedurally generated with calibrated spatial and temporal noise; empirical gains do not guarantee identical field recovery rates on uncurated student submissions without pilot validation.
 3. **Self-Hosted Email Deliverability:** In development, transactional emails are routed to local Mailpit (`:8025`). In production deployments, SMTP delivery depends on campus IT network firewall configurations, SPF records, and DKIM signing.
 4. **Authentication & SSO Scope:** The application enforces allowed campus email domains (`@campus.edu`) and Argon2id session authentication; campus enterprise Single Sign-On (SAML 2.0 / Shibboleth) was out of scope for this build and requires an upstream reverse-proxy bridge.
-5. **Data Retention Policies:**
-   * Private claim evidence files and photos are permanently purged **14 days** post-handover.
-   * Unclaimed reports transition to `expired` after **90 days**.
-   * Expired reports and associated image files are permanently unlinked and archived after **180 days**.
+5. **Data Retention Policies** (configurable in `.env`; applied hourly by the worker):
+   * Found items still open after **90 days** become `unclaimed_expired`.
+   * Photos are deleted **30 days** after their report closes, and claim evidence **30 days** after the claim closes.
+   * Audit rows older than **365 days** can be purged only by the retention job's privileged role.
+6. **Image matching is unvalidated:** the photo signal (CLIP) is computed and used, but it has not been evaluated on real photos, and its raw cosine for a text-to-photo comparison is low (about 0.2–0.3 even for a true match), which can rank a found item with a photo below one without.

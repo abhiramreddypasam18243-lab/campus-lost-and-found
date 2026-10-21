@@ -13,9 +13,10 @@ export interface paths {
         };
         /**
          * Get Admin Evaluation
-         * @description AC-123: View latest saved retrieval evaluation benchmark results.
+         * @description AC-123: the latest saved results, produced offline by `python -m eval.runner final`.
          *
-         *     Never evaluates on live private data.
+         *     The web service never runs an evaluation and never touches live data; if no results have
+         *     been saved yet it says so (404 no_results).
          */
         get: operations["get_admin_evaluation_api_admin_evaluation_get"];
         put?: never;
@@ -1083,7 +1084,10 @@ export interface components {
              */
             building_b: string;
         };
-        /** AdminEvaluationResponse */
+        /**
+         * AdminEvaluationResponse
+         * @description Saved benchmark results (eval/results/benchmark_results.json), shown as recorded.
+         */
         AdminEvaluationResponse: {
             /** Ablations */
             ablations: {
@@ -1093,6 +1097,12 @@ export interface components {
             config_hash: string;
             /** Dataset Hash */
             dataset_hash: string;
+            /** Dev Hash */
+            dev_hash: string;
+            /** Exploratory */
+            exploratory: {
+                [key: string]: unknown;
+            };
             /** Git Commit */
             git_commit: string;
             /** Hardware */
@@ -1107,9 +1117,19 @@ export interface components {
             latency_benchmark: {
                 [key: string]: unknown;
             };
+            /** Limitations */
+            limitations: string[];
             /** Models */
             models: {
+                [key: string]: unknown;
+            };
+            /** Not Evaluated */
+            not_evaluated: {
                 [key: string]: string;
+            }[];
+            /** Pool */
+            pool: {
+                [key: string]: number;
             };
             /** Real Photo Subset */
             real_photo_subset: {
@@ -1117,12 +1137,18 @@ export interface components {
             };
             /** Seed */
             seed: number;
+            /** Status */
+            status: string;
             /** Systems */
             systems: {
                 [key: string]: unknown;
             };
             /** Timestamp */
             timestamp: string;
+            /** Tuning */
+            tuning: {
+                [key: string]: unknown;
+            };
             /** Weights */
             weights: {
                 [key: string]: number;

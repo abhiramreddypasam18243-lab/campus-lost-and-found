@@ -97,7 +97,8 @@ def text_matrix(
     q = embed([r.embedding_text for r in queries])
     c = embed([r.embedding_text for r in pool])
     cos = q @ c.T
-    return np.vectorize(calculate_text_score)(cos).astype(float)
+    scores: np.ndarray = np.vectorize(calculate_text_score)(cos).astype(float)
+    return scores
 
 
 def compute_signals(

@@ -27,8 +27,8 @@ Both models are downloaded once during `docker build` by `backend/scripts/fetch_
 | Dataset / Asset | Origin / Author | Volume | Licence | Consent & Privacy Compliance |
 | :--- | :--- | :--- | :--- | :--- |
 | **Synthetic Campus Benchmark** | Procedural Seeded Generator (`eval/generator.py`) | 300 ground-truth pairs + 100 unclaimed background items | **CC0 1.0 (Public Domain)** | Completely synthetic. Contains zero real student records, PII, or actual university reports. |
-| **Consented Real-Photo Subset** | Consenting University Contributors | 60 items (2 photos each = 120 images) | **CC-BY 4.0** | Donated under written consent for academic research. All EXIF metadata (GPS, device identifiers) stripped. No human faces, IDs, or vehicle plates. |
-| **Consented Independent Text Descriptions** | University Contributors (Blind Pairs) | 60 pairs | **CC-BY 4.0** | Blind descriptions authored independently without access to paired counterpart text. |
+| **Real-photo subset** | — | **Not collected** | — | No photos exist. Before any are used: written consent per contributor, a licence per photo, face/ID/plate screening and EXIF removal must be recorded here. |
+| **Human-written text subset** | — | **Not collected** | — | All benchmark text is template-generated. |
 
 ---
 

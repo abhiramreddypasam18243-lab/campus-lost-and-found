@@ -38,7 +38,9 @@ def measure_latency(
     seed: int = 7,
     dsn: str | None = None,
 ) -> dict[str, Any]:
-    dsn = dsn or os.environ.get("SYNC_DATABASE_URL", "").replace("postgresql+psycopg://", "postgresql://")
+    dsn = dsn or os.environ.get("SYNC_DATABASE_URL", "").replace(
+        "postgresql+psycopg://", "postgresql://"
+    )
     if not dsn:
         return {"status": "not_measured", "reason": "No database configured (SYNC_DATABASE_URL)."}
 
@@ -55,9 +57,13 @@ def measure_latency(
         try:
             for n in sizes:
                 table = f"{SCHEMA}.v{n}"
-                conn.execute(f"CREATE UNLOGGED TABLE {table} (id int PRIMARY KEY, v vector({dimension}))")
+                conn.execute(
+                    f"CREATE UNLOGGED TABLE {table} (id int PRIMARY KEY, v vector({dimension}))"
+                )
                 data = _unit(rng, n, dimension)
-                with conn.cursor().copy(f"COPY {table} (id, v) FROM STDIN WITH (FORMAT BINARY)") as copy:
+                with conn.cursor().copy(
+                    f"COPY {table} (id, v) FROM STDIN WITH (FORMAT BINARY)"
+                ) as copy:
                     copy.set_types(["int4", "vector"])
                     for i in range(n):
                         copy.write_row([i, data[i]])
@@ -84,8 +90,14 @@ def measure_latency(
                     recalls.append(len(set(exact) & set(approx)) / 10)
                 conn.execute("RESET enable_indexscan; RESET enable_seqscan")
                 results[str(n)] = {
-                    "exact_ms": {"p50": round(_percentile(exact_ms, 0.5), 3), "p95": round(_percentile(exact_ms, 0.95), 3)},
-                    "hnsw_ms": {"p50": round(_percentile(hnsw_ms, 0.5), 3), "p95": round(_percentile(hnsw_ms, 0.95), 3)},
+                    "exact_ms": {
+                        "p50": round(_percentile(exact_ms, 0.5), 3),
+                        "p95": round(_percentile(exact_ms, 0.95), 3),
+                    },
+                    "hnsw_ms": {
+                        "p50": round(_percentile(hnsw_ms, 0.5), 3),
+                        "p95": round(_percentile(hnsw_ms, 0.95), 3),
+                    },
                     "hnsw_recall_at_10": round(statistics.mean(recalls), 4),
                     "index_build_seconds": round(build_s, 2),
                     "queries": queries,

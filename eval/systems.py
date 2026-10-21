@@ -41,7 +41,8 @@ def hybrid_matrix(signals: dict[str, np.ndarray], weights: dict[str, float]) -> 
         present = ~np.isnan(s)
         num += np.where(present, w * np.nan_to_num(s), 0.0)
         den += np.where(present, w, 0.0)
-    return np.divide(num, den, out=np.zeros_like(num), where=den > 0)
+    combined: np.ndarray = np.divide(num, den, out=np.zeros_like(num), where=den > 0)
+    return combined
 
 
 @dataclass

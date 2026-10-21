@@ -1,310 +1,358 @@
 {
-  "timestamp": "2026-10-19T19:13:24.412914+00:00",
+  "status": "complete",
+  "timestamp": "2026-10-21T12:24:31.738476+00:00",
   "seed": 42,
-  "dataset_hash": "2d8bb4d3e49586131ba2cbbc03e6c947af6d631bc953751fd8820f87a7c84565",
-  "config_hash": "593848fdab7e97bda877c07a464b96ab8bce478f40cbebc0edfe7010b3e62185",
-  "git_commit": "unknown",
+  "dataset_hash": "894d2bae171ffe58ea735846ddbaea6f226b09d51672f28b8a78bc58434dbac5",
+  "dev_hash": "1692f8753287ccdf24d4b7ca6a642191ee44dc71f5958d339350b51cc834311c",
+  "config_hash": "b3cd10219475bbf16a66127684d956547ef99c0af2560028fccb4ec8c94294dc",
+  "git_commit": "291c2b404140a5977cd78776af184d5956ba224d",
   "hardware": {
     "machine": "x86_64",
-    "processor": "x86_64",
     "system": "Linux",
-    "python_version": "3.12.15"
+    "release": "5.15.167.4-microsoft-standard-WSL2",
+    "cpu_count": 20,
+    "python": "3.12.15",
+    "numpy": "2.5.4"
   },
   "models": {
-    "text_embedding": "all-MiniLM-L6-v2",
-    "image_embedding": "clip-ViT-B-32",
-    "weights_version": "v1.0-grid-tuned"
+    "backend": "model",
+    "image_embedding": null,
+    "text_embedding": "all-MiniLM-L6-v2@1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
   },
   "weights": {
-    "w_text": 0.7,
-    "w_photo": 0.2,
-    "w_location": 0.05,
-    "w_time": 0.05
+    "location": 0.3,
+    "text": 0.4,
+    "time": 0.3
+  },
+  "tuning": {
+    "dev_mrr": 0.9903,
+    "dev_mrr_initial_weights": 0.9788,
+    "grid_points": 231,
+    "step": 0.05,
+    "weights": {
+      "location": 0.3,
+      "text": 0.4,
+      "time": 0.3
+    }
   },
   "systems": {
-    "System A (BM25)": {
+    "A": {
+      "name": "A: BM25 keyword",
+      "description": "BM25 over title and description",
       "metrics": {
-        "recall_at_1": 0.0095,
-        "recall_at_3": 0.0238,
-        "recall_at_5": 0.0381,
-        "recall_at_10": 0.081,
-        "mrr": 0.0418,
-        "ndcg_at_10": 0.037,
-        "precision_at_5": 0.0076
+        "recall_at_1": 0.0619,
+        "recall_at_3": 0.1095,
+        "recall_at_5": 0.1524,
+        "recall_at_10": 0.2333,
+        "mrr": 0.12,
+        "ndcg_at_10": 0.133,
+        "precision_at_5": 0.0305
       },
-      "mrr_95_ci": [
-        0.028,
-        0.0586
+      "mrr_ci": [
+        0.0899,
+        0.1534
       ],
-      "ranks_evaluated": 210
+      "n_queries": 210
     },
-    "System B (Text Embeddings)": {
+    "B": {
+      "name": "B: text embedding",
+      "description": "max(0, cosine) of all-MiniLM-L6-v2 embeddings of category + title + description",
       "metrics": {
-        "recall_at_1": 0.081,
-        "recall_at_3": 0.2333,
-        "recall_at_5": 0.3286,
-        "recall_at_10": 0.6048,
-        "mrr": 0.2315,
-        "ndcg_at_10": 0.296,
-        "precision_at_5": 0.0657
+        "recall_at_1": 0.1952,
+        "recall_at_3": 0.3905,
+        "recall_at_5": 0.481,
+        "recall_at_10": 0.6571,
+        "mrr": 0.3419,
+        "ndcg_at_10": 0.403,
+        "precision_at_5": 0.0962
       },
-      "mrr_95_ci": [
-        0.2006,
-        0.2679
+      "mrr_ci": [
+        0.293,
+        0.3886
       ],
-      "ranks_evaluated": 210
+      "n_queries": 210
     },
-    "System C (Image Similarity)": {
+    "D": {
+      "name": "D: hand-weighted hybrid",
+      "description": "Spec 6.4 hybrid of text, location and time with dev-tuned weights",
       "metrics": {
-        "recall_at_1": 1.0,
-        "recall_at_3": 1.0,
+        "recall_at_1": 0.9333,
+        "recall_at_3": 0.981,
+        "recall_at_5": 0.9905,
+        "recall_at_10": 0.9952,
+        "mrr": 0.959,
+        "ndcg_at_10": 0.968,
+        "precision_at_5": 0.1981
+      },
+      "mrr_ci": [
+        0.9375,
+        0.9789
+      ],
+      "n_queries": 210
+    },
+    "E": {
+      "name": "E: learned fusion",
+      "description": "Logistic regression over text, location and time, trained on dev pairs",
+      "metrics": {
+        "recall_at_1": 0.9714,
+        "recall_at_3": 0.9952,
         "recall_at_5": 1.0,
         "recall_at_10": 1.0,
-        "mrr": 1.0,
-        "ndcg_at_10": 1.0,
+        "mrr": 0.9821,
+        "ndcg_at_10": 0.987,
         "precision_at_5": 0.2
       },
-      "mrr_95_ci": [
-        1.0,
-        1.0
+      "mrr_ci": [
+        0.9663,
+        0.9944
       ],
-      "ranks_evaluated": 58
-    },
-    "System D (Hand-Weighted Hybrid)": {
-      "metrics": {
-        "recall_at_1": 0.8238,
-        "recall_at_3": 0.8762,
-        "recall_at_5": 0.8857,
-        "recall_at_10": 0.8905,
-        "mrr": 0.8546,
-        "ndcg_at_10": 0.862,
-        "precision_at_5": 0.1771
-      },
-      "mrr_95_ci": [
-        0.8094,
-        0.9
-      ],
-      "ranks_evaluated": 210
-    },
-    "System E (Learned Fusion)": {
-      "metrics": {
-        "recall_at_1": 0.9238,
-        "recall_at_3": 0.9762,
-        "recall_at_5": 0.981,
-        "recall_at_10": 0.9905,
-        "mrr": 0.9522,
-        "ndcg_at_10": 0.961,
-        "precision_at_5": 0.1962
-      },
-      "mrr_95_ci": [
-        0.9294,
-        0.9747
-      ],
-      "ranks_evaluated": 210
+      "n_queries": 210
     }
   },
+  "not_evaluated": [
+    {
+      "system": "C: image similarity",
+      "reason": "The benchmark contains no photos. The spec's real-photo subset (60+ items photographed twice by different people) has not been collected, so no image result is reported."
+    },
+    {
+      "system": "Real-photo subset (AC-121)",
+      "reason": "Not collected. No photo, consent record or licence exists for it."
+    },
+    {
+      "system": "Human-written text subset (spec 7.1)",
+      "reason": "Not collected. All benchmark text comes from the seeded templates."
+    }
+  ],
   "hypothesis_h1": {
-    "statement": "H1: The hybrid system has a higher MRR than the best single-signal baseline.",
-    "best_baseline": "System B (Text Embeddings)",
-    "hybrid_system": "System D (Hand-Weighted Hybrid)",
-    "mean_mrr_difference": 0.6236,
+    "statement": "H1: The hand-weighted hybrid (D) has a higher MRR than the best single-signal baseline.",
+    "registered_in": "eval/HYPOTHESES.md (committed before the test run)",
+    "best_baseline": "B: text embedding",
+    "hybrid_system": "D: hand-weighted hybrid",
+    "mean_mrr_difference": 0.618,
     "difference_95_ci": [
-      0.5747,
-      0.6731
+      0.5676,
+      0.6688
     ],
     "is_supported": true,
-    "confidence_excludes_zero": true,
-    "limits": "Synthetic text, location, and time rules share generation assumptions with scoring functions; results reflect synthetic campus simulation rather than verified real-world recovery gains."
+    "outcome": "Supported: the 95% interval of the MRR difference [0.5676, 0.6688] excludes 0."
+  },
+  "exploratory": {
+    "note": "Exploratory, not pre-registered.",
+    "learned_fusion_vs_best_baseline": {
+      "mean_mrr_difference": 0.6412,
+      "difference_95_ci": [
+        0.5921,
+        0.689
+      ]
+    }
   },
   "real_photo_subset": {
-    "sample_count": 58,
-    "metrics": {
-      "recall_at_1": 0.8793,
-      "recall_at_3": 0.8793,
-      "recall_at_5": 0.8966,
-      "recall_at_10": 0.8966,
-      "mrr": 0.8849,
-      "ndcg_at_10": 0.886,
-      "precision_at_5": 0.1793
-    }
+    "status": "not_collected",
+    "sample_count": 0,
+    "reason": "Not collected. No photo, consent record or licence exists for it."
   },
   "ablations": {
     "signal_removal": {
       "drop_text": {
         "metrics": {
-          "recall_at_1": 0.7905,
-          "recall_at_3": 0.9333,
-          "recall_at_5": 0.9714,
-          "recall_at_10": 0.9762,
-          "mrr": 0.8668,
-          "ndcg_at_10": 0.893,
-          "precision_at_5": 0.1943
+          "recall_at_1": 0.8143,
+          "recall_at_3": 0.9238,
+          "recall_at_5": 0.9524,
+          "recall_at_10": 0.981,
+          "mrr": 0.8777,
+          "ndcg_at_10": 0.902,
+          "precision_at_5": 0.1905
         },
-        "mrr_95_ci": [
-          0.829,
-          0.9023
-        ]
-      },
-      "drop_photo": {
-        "metrics": {
-          "recall_at_1": 0.7905,
-          "recall_at_3": 0.8714,
-          "recall_at_5": 0.8857,
-          "recall_at_10": 0.8905,
-          "mrr": 0.8341,
-          "ndcg_at_10": 0.847,
-          "precision_at_5": 0.1771
-        },
-        "mrr_95_ci": [
-          0.7875,
-          0.8784
+        "mrr_ci": [
+          0.8405,
+          0.9116
         ]
       },
       "drop_location": {
         "metrics": {
           "recall_at_1": 0.8238,
-          "recall_at_3": 0.8762,
-          "recall_at_5": 0.8857,
-          "recall_at_10": 0.8905,
-          "mrr": 0.8545,
-          "ndcg_at_10": 0.862,
-          "precision_at_5": 0.1771
+          "recall_at_3": 0.981,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.9011,
+          "ndcg_at_10": 0.926,
+          "precision_at_5": 0.2
         },
-        "mrr_95_ci": [
-          0.8093,
-          0.9
+        "mrr_ci": [
+          0.87,
+          0.9298
         ]
       },
       "drop_time": {
         "metrics": {
-          "recall_at_1": 0.819,
-          "recall_at_3": 0.8762,
-          "recall_at_5": 0.8857,
-          "recall_at_10": 0.8905,
-          "mrr": 0.8514,
-          "ndcg_at_10": 0.86,
-          "precision_at_5": 0.1771
+          "recall_at_1": 0.6238,
+          "recall_at_3": 0.8429,
+          "recall_at_5": 0.881,
+          "recall_at_10": 0.9095,
+          "mrr": 0.7389,
+          "ndcg_at_10": 0.779,
+          "precision_at_5": 0.1762
         },
-        "mrr_95_ci": [
-          0.8062,
-          0.8968
-        ]
-      }
-    },
-    "missing_photos": {
-      "missing_photos_0%": {
-        "mrr": 0.8546,
-        "ci": [
-          0.35,
-          0.52
-        ]
-      },
-      "missing_photos_25%": {
-        "mrr": 0.8246,
-        "ci": [
-          0.35,
-          0.52
-        ]
-      },
-      "missing_photos_50%": {
-        "mrr": 0.7946,
-        "ci": [
-          0.35,
-          0.52
-        ]
-      },
-      "missing_photos_75%": {
-        "mrr": 0.7646,
-        "ci": [
-          0.35,
-          0.52
-        ]
-      },
-      "missing_photos_100%": {
-        "mrr": 0.7346,
-        "ci": [
-          0.35,
-          0.52
+        "mrr_ci": [
+          0.6872,
+          0.7858
         ]
       }
     },
     "location_noise": {
-      "location_noise_0%": {
-        "mrr": 0.8546,
-        "ci": [
-          0.38,
-          0.54
+      "0%": {
+        "metrics": {
+          "recall_at_1": 0.9333,
+          "recall_at_3": 0.981,
+          "recall_at_5": 0.9905,
+          "recall_at_10": 0.9952,
+          "mrr": 0.959,
+          "ndcg_at_10": 0.968,
+          "precision_at_5": 0.1981
+        },
+        "mrr_ci": [
+          0.9375,
+          0.9789
         ]
       },
-      "location_noise_25%": {
-        "mrr": 0.8346,
-        "ci": [
-          0.38,
-          0.54
+      "25%": {
+        "metrics": {
+          "recall_at_1": 0.9476,
+          "recall_at_3": 0.981,
+          "recall_at_5": 0.9905,
+          "recall_at_10": 0.9952,
+          "mrr": 0.9661,
+          "ndcg_at_10": 0.973,
+          "precision_at_5": 0.1981
+        },
+        "mrr_ci": [
+          0.9454,
+          0.9849
         ]
       },
-      "location_noise_50%": {
-        "mrr": 0.8146,
-        "ci": [
-          0.38,
-          0.54
+      "50%": {
+        "metrics": {
+          "recall_at_1": 0.9381,
+          "recall_at_3": 0.981,
+          "recall_at_5": 0.9905,
+          "recall_at_10": 0.9952,
+          "mrr": 0.9614,
+          "ndcg_at_10": 0.97,
+          "precision_at_5": 0.1981
+        },
+        "mrr_ci": [
+          0.9402,
+          0.9808
         ]
       }
     },
     "time_noise": {
-      "time_noise_0%": {
-        "mrr": 0.8546,
-        "ci": [
-          0.4,
-          0.55
+      "0%": {
+        "metrics": {
+          "recall_at_1": 0.9333,
+          "recall_at_3": 0.981,
+          "recall_at_5": 0.9905,
+          "recall_at_10": 0.9952,
+          "mrr": 0.959,
+          "ndcg_at_10": 0.968,
+          "precision_at_5": 0.1981
+        },
+        "mrr_ci": [
+          0.9375,
+          0.9789
         ]
       },
-      "time_noise_25%": {
-        "mrr": 0.8421,
-        "ci": [
-          0.4,
-          0.55
+      "25%": {
+        "metrics": {
+          "recall_at_1": 0.8905,
+          "recall_at_3": 0.9667,
+          "recall_at_5": 0.9762,
+          "recall_at_10": 0.9952,
+          "mrr": 0.931,
+          "ndcg_at_10": 0.947,
+          "precision_at_5": 0.1952
+        },
+        "mrr_ci": [
+          0.9042,
+          0.9567
         ]
       },
-      "time_noise_50%": {
-        "mrr": 0.8296,
-        "ci": [
-          0.4,
-          0.55
+      "50%": {
+        "metrics": {
+          "recall_at_1": 0.881,
+          "recall_at_3": 0.9476,
+          "recall_at_5": 0.9571,
+          "recall_at_10": 0.9952,
+          "mrr": 0.9186,
+          "ndcg_at_10": 0.937,
+          "precision_at_5": 0.1914
+        },
+        "mrr_ci": [
+          0.8858,
+          0.9465
         ]
       }
+    },
+    "missing_photos": {
+      "status": "not_evaluated",
+      "reason": "No photos in the benchmark, so there is nothing to remove."
     }
   },
   "latency_benchmark": {
-    "1000_candidates": {
-      "exact_search_ms": {
-        "p50": 1.25,
-        "p95": 2.1
+    "status": "measured",
+    "dimension": 384,
+    "method": "client-side wall time per top-10 query over one local connection; exact = index scans disabled",
+    "sizes": {
+      "1000": {
+        "exact_ms": {
+          "p50": 0.406,
+          "p95": 0.694
+        },
+        "hnsw_ms": {
+          "p50": 0.39,
+          "p95": 0.883
+        },
+        "hnsw_recall_at_10": 0.992,
+        "index_build_seconds": 0.17,
+        "queries": 50
       },
-      "approximate_hnsw_ms": {
-        "p50": 0.45,
-        "p95": 0.85
-      }
-    },
-    "10000_candidates": {
-      "exact_search_ms": {
-        "p50": 11.8,
-        "p95": 16.4
+      "10000": {
+        "exact_ms": {
+          "p50": 2.844,
+          "p95": 3.805
+        },
+        "hnsw_ms": {
+          "p50": 0.998,
+          "p95": 1.435
+        },
+        "hnsw_recall_at_10": 0.298,
+        "index_build_seconds": 1.31,
+        "queries": 50
       },
-      "approximate_hnsw_ms": {
-        "p50": 1.15,
-        "p95": 1.95
-      }
-    },
-    "100000_candidates": {
-      "exact_search_ms": {
-        "p50": 112.5,
-        "p95": 145.2
-      },
-      "approximate_hnsw_ms": {
-        "p50": 3.4,
-        "p95": 5.8
+      "100000": {
+        "exact_ms": {
+          "p50": 24.573,
+          "p95": 36.286
+        },
+        "hnsw_ms": {
+          "p50": 3.685,
+          "p95": 5.423
+        },
+        "hnsw_recall_at_10": 0.062,
+        "index_build_seconds": 91.34,
+        "queries": 50
       }
     }
+  },
+  "limitations": [
+    "All text is template-generated; lost and found sides use different lexicons and 2% typos, but real reports are more varied.",
+    "Location and time are generated with the same assumptions the scoring functions encode (60/30/10 location noise, a log-normal delay with a 6-hour median), so part of any hybrid advantage is by construction.",
+    "No photos: the image signal, which carries the largest initial weight in production, is not evaluated.",
+    "These are retrieval metrics on a synthetic benchmark; they say nothing about real-world recovery rates, which only a pilot could show.",
+    "Latency uses random vectors on one machine with one connection; it excludes embedding time."
+  ],
+  "pool": {
+    "test_queries": 210,
+    "candidates_per_query": 310
   }
 }

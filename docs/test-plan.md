@@ -198,40 +198,46 @@ This test plan defines the complete traceability matrix mapping every single Acc
 
 ## 13. Research Evaluation Framework (AC-109 to AC-123)
 
-| AC ID | Requirement Summary | Verification Method | Automated Test / Implementation File |
+Descriptions follow spec section 15. Status as of 2026-10-21.
+
+| AC ID | Requirement (spec) | Status | Verified by |
 | :--- | :--- | :--- | :--- |
-| **AC-109** | Seeded generator builds 300 ground-truth pairs and 100 unclaimed items | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-110** | Deterministic 30% dev / 70% test split with recorded SHA-256 test set hash | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-111** | Metric computation: Recall@1, Recall@3, Recall@5, MRR, nDCG@10, Precision@5 | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-112** | 1,000-sample bootstrap confidence intervals and paired bootstrap testing | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-113** | Strict leakage prevention: Tuning harness throws `DataLeakageError` on test split | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-114** | Single-signal retrieval baselines evaluated (Text-only, Image-only, Location, Time) | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-115** | Systems A–E evaluated across all primary evaluation metrics | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-116** | Signal ablation sweeps (leave-one-out testing) | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-117** | Noise sweeps on location and time tolerances | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-118** | End-to-end retrieval latency benchmarks recorded | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-119** | Hypothesis H1 testing with paired bootstrap significance check | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-120** | Benchmark outputs stored as structured `benchmark_results.json` and `.csv` | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-121** | Pre-computed benchmark results served via `GET /api/admin/evaluation` | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-122** | Admin evaluation endpoint returns 404 to non-admin users | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
-| **AC-123** | Live student queries are never evaluated against or logged into benchmark runs | Automated Test | [`backend/tests/test_ac_109_to_123_evaluation.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_109_to_123_evaluation.py) |
+| **AC-109** | Deterministic generator: 300 true items + 100 background found reports | Pass | `backend/tests/test_ac_109_to_123_evaluation.py` |
+| **AC-110** | Stratified 30/70 split, no overlap, test hash recorded | Pass | `backend/tests/test_ac_109_to_123_evaluation.py` |
+| **AC-111** | Tuning code cannot read test labels (by split name and by item label) | Pass | `backend/tests/test_ac_109_to_123_evaluation.py` |
+| **AC-112** | Metric fixture [1, 3, 2, 10] | Pass | `backend/tests/test_ac_109_to_123_evaluation.py` |
+| **AC-113** | BM25 toy corpus | Pass | `backend/tests/test_ac_109_to_123_evaluation.py` |
+| **AC-114** | Bootstrap CI deterministic, exact for all-ones, ≥90/100 coverage | Pass | `backend/tests/test_ac_109_to_123_evaluation.py` |
+| **AC-115** | Paired bootstrap A=[1,1,1,1], B=[2,2,2,2] | Pass | `backend/tests/test_ac_109_to_123_evaluation.py` |
+| **AC-116** | Harness evaluates BM25, text, image, hybrid, learned fusion + ablations; records models, weights, seed, dataset hash, commit, hardware | **Partial** — image (C) not evaluated: no photos exist | `backend/tests/test_ac_109_to_123_evaluation.py`; `eval/results/benchmark_results.json` |
+| **AC-117** | Weights tuned on dev (0.05 grid, by dev MRR), fusion trained on dev, config frozen and hashed before the test run | Pass | `backend/tests/test_ac_109_to_123_evaluation.py`; commit `291c2b4` (config + hypotheses before results) |
+| **AC-118** | Test run once from the frozen config; re-run reproduces identical numbers; JSON + CSV with CIs | Pass | `python -m eval.runner final --reproduce` → identical; second `final` refused |
+| **AC-119** | Ablations: remove each signal; missing photos 0–100%; location and time noise 0/25/50% | **Partial** — missing-photo sweep not possible without photos | `eval/results/benchmark_results.json` |
+| **AC-120** | Latency p50/p95 at 1k/10k/100k, approximate vs exact, hardware recorded | Pass (measured in pgvector) | `eval/latency.py`; results file |
+| **AC-121** | Hypotheses written before the test run; outcome reported either way; limits stated; real-photo subset (≥60) reported separately | **Partial** — real-photo subset not collected | `eval/HYPOTHESES.md`; README section 5 |
+| **AC-122** | Evaluation data has no faces/personal data, EXIF removed, consent and licences recorded, data card | Pass for the synthetic data (no photos, no contributors); must be redone if photos are collected | `eval/DATA_CARD.md`; `backend/tests/test_ac_109_to_123_evaluation.py` |
+| **AC-123** | Admin page shows the latest saved results; never evaluates live data | Pass (endpoint serves saved results only; 404 `no_results` otherwise) | `backend/tests/test_ac_109_to_123_evaluation.py`; admin Evaluation page |
 
 ---
 
 ## 14. UI, Accessibility & Architecture Gates (AC-124 to AC-137)
 
-| AC ID | Requirement Summary | Verification Method | Automated Test / Implementation File |
+UI checks were run on 2026-10-21 with Playwright (Chromium) against the Compose stack: the full
+demo journey, an axe scan of seven pages, and 360 × 740 layouts. The script is not yet in the
+repository, so these are recorded manual runs, not CI tests.
+
+| AC ID | Requirement (spec) | Status | Verified by |
 | :--- | :--- | :--- | :--- |
-| **AC-124** | Browse found listings screen with filters and responsive grid | Automated UI / Spec | [`frontend/src/App.tsx`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/frontend/src/App.tsx) |
-| **AC-125** | Report submission with `capture="environment"` camera attributes | Automated UI / Spec | [`frontend/src/App.tsx`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/frontend/src/App.tsx) |
-| **AC-126** | Match suggestions screen displaying additive explanations | Automated UI / Spec | [`frontend/src/App.tsx`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/frontend/src/App.tsx) |
-| **AC-127** | Handover desk screen displays only success or attempts remaining | Automated UI / Spec | [`frontend/src/App.tsx`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/frontend/src/App.tsx) |
-| **AC-128** | Accessible focus rings (`:focus-visible`), aria labels, keyboard navigation | CSS / Lint | [`frontend/src/index.css`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/frontend/src/index.css) |
-| **AC-129** | Responsive down to 360px viewport without horizontal scrolling | CSS Layout | [`frontend/src/index.css`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/frontend/src/index.css) |
-| **AC-130** | Moderation queue with claim locks and status indicators | Automated UI / Spec | [`frontend/src/App.tsx`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/frontend/src/App.tsx) |
+| **AC-124** | Loading, empty and error states; form errors linked with `aria-describedby` | Implemented | `frontend/src/app/ui.tsx` (`AsyncView`, field components) |
+| **AC-125** | Keyboard-only end-to-end test; visible focus everywhere | **Not automated** — focus styles in `styles.css`; no keyboard-only test yet | — |
+| **AC-126** | axe scan: no serious or critical violations on main pages | Pass (recorded run, 7 pages) | Playwright + axe-core 4.10.2 |
+| **AC-127** | No horizontal scroll at 360 × 740; photo field opens the camera | Pass (recorded run, 5 pages); `capture="environment"` on the photo input | Playwright |
+| **AC-128** | Matches show score, bin, text explanation, "not mine", suggestion notice | Implemented and exercised in the recorded run | `frontend/src/app/pages/Reports.tsx` |
+| **AC-129** | Handover desk shows only success/failure and attempts left; never the code | Implemented and exercised (wrong code → "4 of 5", correct code → complete; code never on the desk page) | `frontend/src/app/pages/Moderation.tsx` |
+| **AC-130** | Moderation queue: pending reports, duplicate-image flags, claims with lock status | Implemented | `frontend/src/app/pages/Moderation.tsx` |
 | **AC-131** | Database schema builds from empty via Alembic, downgrades, and reports zero drift | Automated CLI Test | [`backend/tests/test_ac_131_migrations.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_131_migrations.py) |
 | **AC-132** | Pure domain layering: zero DB/framework/clock imports in `app.domain` | AST Inspection Test | [`backend/tests/test_ac_131_to_137_quality_and_architecture.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_131_to_137_quality_and_architecture.py) |
-| **AC-133** | OpenAPI document schema generation and API spec validation | Automated Test | [`backend/tests/test_ac_131_to_137_quality_and_architecture.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_131_to_137_quality_and_architecture.py) |
+| **AC-133** | Frontend API types generated from the OpenAPI document; CI fails if out of date | Pass | `backend/scripts/export_openapi.py`, `npm run gen:api`, two drift steps in `.github/workflows/ci.yml` |
 | **AC-134** | Test coverage exceeds 90% across domain & services | Pytest-cov Metric | [`backend/tests/conftest.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/conftest.py) |
 | **AC-135** | CI pipeline runs linting, type checks, unit and integration tests | CI Suite | GitHub Actions / Docker Test Suites |
 | **AC-136** | Canary test proves zero passwords, session tokens, or emails leak into logs | Automated Test | [`backend/tests/test_ac_131_to_137_quality_and_architecture.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_131_to_137_quality_and_architecture.py) |
@@ -247,8 +253,8 @@ This test plan defines the complete traceability matrix mapping every single Acc
 | **AC-139** | Offline models: System operates without outbound network access | Container Config | [`backend/Dockerfile`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/Dockerfile) |
 | **AC-140** | `/api/health` returns 200 with db/worker status; non-root user execution | Docker / API Test | [`backend/app/api/health.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/app/api/health.py) |
 | **AC-141** | Data volume persistence across `docker compose down` and `up` | Docker Volume Test | Volumes `db_data` and `image_data` in [`docker-compose.yml`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/docker-compose.yml) |
-| **AC-142** | Reverse proxy TLS termination at `:8443` supporting TLS 1.2+ | Proxy Config | [`frontend/nginx.conf`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/frontend/nginx.conf) |
-| **AC-143** | Multi-device network test on local network documented | Manual Verification | [`README.md`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/README.md) |
+| **AC-142** | Reverse proxy TLS termination at `:8443` supporting TLS 1.2+ | **Not done** — `frontend/nginx.conf` listens on port 80 only | — |
+| **AC-143** | Multi-device network test on local network documented | **Not done** — no TLS proxy in `docker-compose.yml`; README section 7 | — |
 | **AC-144** | Development emails routed to Mailpit at `:8025` / `:1025` | Integration Test | [`docker-compose.yml`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/docker-compose.yml) & Mailpit service |
 | **AC-145** | Seed command (`python -m app.seed`) populates synthetic campus tree and roles | CLI Execution Test | [`backend/app/seed.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/app/seed.py) |
 | **AC-146** | Full end-to-end demo journey executed in CI | Automated Test | [`backend/tests/test_ac_146_demo_journey.py`](file:///c:/Users/abhir/OneDrive/Desktop/AIDS/Campus%20lost%20and%20found/backend/tests/test_ac_146_demo_journey.py) |

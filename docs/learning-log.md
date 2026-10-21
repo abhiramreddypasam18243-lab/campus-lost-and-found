@@ -440,6 +440,26 @@ This log tracks the build rationale, architectural decisions, failure modes, and
 * **Why it is designed that way:** tests must stay fast and deterministic (stand-ins), while the deployed system must be real and offline (baked, checksummed weights). Keeping torch out of `requirements.txt` means CI does not download it; only the image does.
 * **One thing that could go wrong:** CLIP text-to-image cosines are small in absolute terms (about 0.25 to 0.35 even for a correct pair), so with `max(0, cos)` the text-to-image signal pulls hybrid scores down. The weights and bins should be re-tuned on the development set before relying on them.
 
+---
+
+## Fix pass 2 (2026-10-21): The web client rebuilt on the real API
+
+* **What was built:**
+  * `frontend/src/app/` replaces the simulated UI. Every screen of spec section 11 now calls the API: sign-in, registration and email verification; browsing with search, filters and cursor paging; lost and found reports with the fixed category list, a cascading location-tree picker, PII errors on the right field and photo upload; my reports with match suggestions; claims with the finder's questions; claim detail with the claimant-only handover code; notifications; account (match-email opt-out, export, deletion); moderation queue, report and claim review, handover desk, dashboard and admin.
+  * Types come from the backend's OpenAPI document (`backend/scripts/export_openapi.py` then `npm run gen:api`); CI regenerates both and fails on any difference (AC-133).
+  * Backend additions the UI needed: `GET /api/reports/mine`, `GET /api/auth/csrf` (a fresh CSRF token after a reload), `PATCH /api/me`, `GET /api/found/{id}/claim-form` (D-20), `GET /api/mod/handovers`, and claim titles. Registration now really emails the verification link, and the worker delivers outbox emails with a stable Message-ID.
+* **Why it is designed that way:** the browser holds no business logic and never invents data — if a request fails the user sees an error state, never a pretend result. The CSRF token lives in `sessionStorage` (per tab) and is refreshed from the server when missing; the session itself stays in an HttpOnly cookie that scripts cannot read. Hash routing needs no server rewrites, and system fonts mean the page makes no third-party requests.
+* **One thing that could go wrong:** the raw CLIP text-to-photo score (about 0.18 for the demo laptop) can rank a found item *with* a photo below one without — seen in the browser run, where a charger outranked the right laptop. It follows the spec formula, so changing it is a decision to record (calibrate, lower the weight, or use image-to-image only).
+
+---
+
+## Fix pass 3 (2026-10-21): An honest evaluation
+
+* **What was built:** the benchmark now scores location and time with the application's own domain functions and text with the real MiniLM model; tunes the hybrid weights by a real 231-point grid search on the development split; trains learned fusion (logistic regression) on development pairs; freezes and hashes the configuration; pre-registers H1 (`eval/HYPOTHESES.md`, committed before the test run); evaluates the test split once; checks reproducibility; and measures pgvector latency. Things that do not exist — photos, a human-written subset — are reported as not evaluated instead of being simulated.
+* **Results:** MRR A 0.120, B 0.342, D 0.959, E 0.982; H1 supported (D − B = 0.618, 95% CI [0.568, 0.669]), largely by construction because the synthetic location and time follow the scoring's own assumptions. Text-only MiniLM roughly triples BM25 when lost and found use different words — that is the informative semantic result.
+* **Why it is designed that way:** a number chosen after seeing the test set is not evidence. Separating `tune` (dev only, writes a hashed config) from `final` (reads it, refuses to run twice) makes the order checkable, and the git history shows the hypotheses before the results.
+* **One thing that could go wrong:** HNSW recall@10 on random 384-d vectors collapsed (0.30 at 10k, 0.06 at 100k) at the default `ef_search = 40`. Random isotropic vectors are a worst case; real embeddings cluster, but recall should be measured on real embeddings before HNSW is relied on for retrieval.
+
 
 
 

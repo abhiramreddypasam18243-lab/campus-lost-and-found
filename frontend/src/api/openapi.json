@@ -74,6 +74,7 @@
       },
       "AdminEvaluationResponse": {
         "additionalProperties": false,
+        "description": "Saved benchmark results (eval/results/benchmark_results.json), shown as recorded.",
         "properties": {
           "ablations": {
             "additionalProperties": true,
@@ -87,6 +88,15 @@
           "dataset_hash": {
             "title": "Dataset Hash",
             "type": "string"
+          },
+          "dev_hash": {
+            "title": "Dev Hash",
+            "type": "string"
+          },
+          "exploratory": {
+            "additionalProperties": true,
+            "title": "Exploratory",
+            "type": "object"
           },
           "git_commit": {
             "title": "Git Commit",
@@ -107,11 +117,33 @@
             "title": "Latency Benchmark",
             "type": "object"
           },
-          "models": {
-            "additionalProperties": {
+          "limitations": {
+            "items": {
               "type": "string"
             },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "models": {
+            "additionalProperties": true,
             "title": "Models",
+            "type": "object"
+          },
+          "not_evaluated": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Not Evaluated",
+            "type": "array"
+          },
+          "pool": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Pool",
             "type": "object"
           },
           "real_photo_subset": {
@@ -123,6 +155,10 @@
             "title": "Seed",
             "type": "integer"
           },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
           "systems": {
             "additionalProperties": true,
             "title": "Systems",
@@ -131,6 +167,11 @@
           "timestamp": {
             "title": "Timestamp",
             "type": "string"
+          },
+          "tuning": {
+            "additionalProperties": true,
+            "title": "Tuning",
+            "type": "object"
           },
           "weights": {
             "additionalProperties": {
@@ -141,19 +182,26 @@
           }
         },
         "required": [
+          "status",
           "timestamp",
           "seed",
           "dataset_hash",
+          "dev_hash",
           "config_hash",
           "git_commit",
           "hardware",
           "models",
           "weights",
+          "tuning",
           "systems",
+          "not_evaluated",
           "hypothesis_h1",
+          "exploratory",
           "real_photo_subset",
           "ablations",
-          "latency_benchmark"
+          "latency_benchmark",
+          "limitations",
+          "pool"
         ],
         "title": "AdminEvaluationResponse",
         "type": "object"
@@ -2586,7 +2634,7 @@
   "paths": {
     "/api/admin/evaluation": {
       "get": {
-        "description": "AC-123: View latest saved retrieval evaluation benchmark results.\n\nNever evaluates on live private data.",
+        "description": "AC-123: the latest saved results, produced offline by `python -m eval.runner final`.\n\nThe web service never runs an evaluation and never touches live data; if no results have\nbeen saved yet it says so (404 no_results).",
         "operationId": "get_admin_evaluation_api_admin_evaluation_get",
         "parameters": [
           {

@@ -46,9 +46,18 @@ BOOTSTRAP_RESAMPLES = 1000
 
 SYSTEM_INFO = {
     "A": ("A: BM25 keyword", "BM25 over title and description"),
-    "B": ("B: text embedding", "max(0, cosine) of all-MiniLM-L6-v2 embeddings of category + title + description"),
-    "D": ("D: hand-weighted hybrid", "Spec 6.4 hybrid of text, location and time with dev-tuned weights"),
-    "E": ("E: learned fusion", "Logistic regression over text, location and time, trained on dev pairs"),
+    "B": (
+        "B: text embedding",
+        "max(0, cosine) of all-MiniLM-L6-v2 embeddings of category + title + description",
+    ),
+    "D": (
+        "D: hand-weighted hybrid",
+        "Spec 6.4 hybrid of text, location and time with dev-tuned weights",
+    ),
+    "E": (
+        "E: learned fusion",
+        "Logistic regression over text, location and time, trained on dev pairs",
+    ),
 }
 
 NOT_EVALUATED = [
@@ -87,7 +96,9 @@ def git_commit() -> str:
     if env:
         return env
     try:
-        out = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False)
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
+        )
         return out.stdout.strip() or "unknown"
     except OSError:
         return "unknown"
@@ -106,7 +117,11 @@ def hardware() -> dict[str, Any]:
 
 def model_identity(backend: str) -> dict[str, Any]:
     if backend == "standin":
-        return {"text_embedding": "standin-hash-vectors", "image_embedding": None, "backend": "standin"}
+        return {
+            "text_embedding": "standin-hash-vectors",
+            "image_embedding": None,
+            "backend": "standin",
+        }
     from app.core.config import get_settings
 
     s = get_settings()
@@ -129,7 +144,9 @@ def make_embedder(backend: str) -> TextEmbedder:
 # ---------------------------------------------------------------- tuning (dev only)
 
 
-def tune(dataset: BenchmarkDataset, embed: TextEmbedder, backend: str, out_dir: Path) -> dict[str, Any]:
+def tune(
+    dataset: BenchmarkDataset, embed: TextEmbedder, backend: str, out_dir: Path
+) -> dict[str, Any]:
     dev_pool, _ = pools(dataset)
     harness = TuningHarness("dev", dataset.dev_items, dev_pool, embed=embed)
     tuning = harness.tune_weights_grid(step=0.05)
@@ -184,7 +201,15 @@ def _noisy_pool(
             shift = timedelta(hours=24)
             start = datetime.fromisoformat(r.window_start) + shift
             end = datetime.fromisoformat(r.window_end) + shift
-            out.append(ReportData(**{**r.__dict__, "window_start": start.isoformat(), "window_end": end.isoformat()}))
+            out.append(
+                ReportData(
+                    **{
+                        **r.__dict__,
+                        "window_start": start.isoformat(),
+                        "window_end": end.isoformat(),
+                    }
+                )
+            )
     return out
 
 
@@ -207,7 +232,9 @@ def evaluate_test(
 
     # H1 (pre-registered in eval/HYPOTHESES.md): D vs the better of the single-signal baselines.
     base_key = "B" if systems["B"]["metrics"]["mrr"] >= systems["A"]["metrics"]["mrr"] else "A"
-    diff, lo, hi = paired_bootstrap_ci(ranks["D"], ranks[base_key], mrr, n_resamples=BOOTSTRAP_RESAMPLES, seed=seed)
+    diff, lo, hi = paired_bootstrap_ci(
+        ranks["D"], ranks[base_key], mrr, n_resamples=BOOTSTRAP_RESAMPLES, seed=seed
+    )
     supported = lo > 0
     hypothesis = {
         "statement": "H1: The hand-weighted hybrid (D) has a higher MRR than the best single-signal baseline.",
@@ -223,10 +250,15 @@ def evaluate_test(
             else f"Not supported: the 95% interval of the MRR difference [{lo}, {hi}] does not lie above 0."
         ),
     }
-    e_diff, e_lo, e_hi = paired_bootstrap_ci(ranks["E"], ranks[base_key], mrr, n_resamples=BOOTSTRAP_RESAMPLES, seed=seed)
+    e_diff, e_lo, e_hi = paired_bootstrap_ci(
+        ranks["E"], ranks[base_key], mrr, n_resamples=BOOTSTRAP_RESAMPLES, seed=seed
+    )
     exploratory = {
         "note": "Exploratory, not pre-registered.",
-        "learned_fusion_vs_best_baseline": {"mean_mrr_difference": e_diff, "difference_95_ci": [e_lo, e_hi]},
+        "learned_fusion_vs_best_baseline": {
+            "mean_mrr_difference": e_diff,
+            "difference_95_ci": [e_lo, e_hi],
+        },
     }
 
     # Ablations: remove one signal from the hybrid (spec 7.6)
@@ -258,13 +290,19 @@ def evaluate_test(
         "signal_removal": signal_removal,
         "location_noise": noisy("location"),
         "time_noise": noisy("time"),
-        "missing_photos": {"status": "not_evaluated", "reason": "No photos in the benchmark, so there is nothing to remove."},
+        "missing_photos": {
+            "status": "not_evaluated",
+            "reason": "No photos in the benchmark, so there is nothing to remove.",
+        },
     }
 
     latency = (
         measure_latency(latency_sizes)
         if latency_sizes
-        else {"status": "not_measured", "reason": "Latency measurement was not requested for this run."}
+        else {
+            "status": "not_measured",
+            "reason": "Latency measurement was not requested for this run.",
+        }
     )
 
     return {
@@ -283,7 +321,11 @@ def evaluate_test(
         "not_evaluated": NOT_EVALUATED,
         "hypothesis_h1": hypothesis,
         "exploratory": exploratory,
-        "real_photo_subset": {"status": "not_collected", "sample_count": 0, "reason": NOT_EVALUATED[1]["reason"]},
+        "real_photo_subset": {
+            "status": "not_collected",
+            "sample_count": 0,
+            "reason": NOT_EVALUATED[1]["reason"],
+        },
         "ablations": ablations,
         "latency_benchmark": latency,
         "limitations": LIMITATIONS,
@@ -296,11 +338,37 @@ def write_results(report: dict[str, Any], out_dir: Path) -> None:
     (out_dir / "benchmark_results.json").write_text(json.dumps(report, indent=2) + "\n")
     with open(out_dir / "benchmark_results.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(["row", "MRR", "MRR_CI_low", "MRR_CI_high", "Recall@1", "Recall@3", "Recall@5", "Recall@10", "nDCG@10", "Precision@5"])
+        w.writerow(
+            [
+                "row",
+                "MRR",
+                "MRR_CI_low",
+                "MRR_CI_high",
+                "Recall@1",
+                "Recall@3",
+                "Recall@5",
+                "Recall@10",
+                "nDCG@10",
+                "Precision@5",
+            ]
+        )
 
         def row(label: str, block: dict[str, Any]) -> None:
             m, ci = block["metrics"], block["mrr_ci"]
-            w.writerow([label, m["mrr"], ci[0], ci[1], m["recall_at_1"], m["recall_at_3"], m["recall_at_5"], m["recall_at_10"], m["ndcg_at_10"], m["precision_at_5"]])
+            w.writerow(
+                [
+                    label,
+                    m["mrr"],
+                    ci[0],
+                    ci[1],
+                    m["recall_at_1"],
+                    m["recall_at_3"],
+                    m["recall_at_5"],
+                    m["recall_at_10"],
+                    m["ndcg_at_10"],
+                    m["precision_at_5"],
+                ]
+            )
 
         for s in report["systems"].values():
             row(s["name"], s)
@@ -337,7 +405,9 @@ def main(argv: list[str] | None = None) -> int:
     t = sub.add_parser("tune", help="tune on the development split and freeze the configuration")
     t.add_argument("--seed", type=int, default=42)
     f = sub.add_parser("final", help="evaluate the test split once from the frozen configuration")
-    f.add_argument("--reproduce", action="store_true", help="re-run and compare with the saved results")
+    f.add_argument(
+        "--reproduce", action="store_true", help="re-run and compare with the saved results"
+    )
     f.add_argument("--latency-sizes", default="1000,10000,100000")
     for p in (t, f):
         p.add_argument("--backend", choices=["model", "standin"], default="model")
@@ -347,7 +417,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "tune":
         dataset = generate_benchmark_dataset(seed=args.seed)
         frozen = tune(dataset, make_embedder(args.backend), args.backend, args.out)
-        print(json.dumps({"weights": frozen["weights"], "tuning": frozen["tuning"], "config_hash": frozen["config_hash"]}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "weights": frozen["weights"],
+                    "tuning": frozen["tuning"],
+                    "config_hash": frozen["config_hash"],
+                },
+                indent=2,
+            )
+        )
         return 0
 
     frozen = load_frozen_config(args.out / "frozen_config.json")
@@ -356,22 +435,31 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     dataset = generate_benchmark_dataset(seed=frozen["seed"])
     if (dataset.dev_hash, dataset.test_hash) != (frozen["dev_hash"], frozen["test_hash"]):
-        print("The dataset changed since tuning (hash mismatch); re-run tune first.", file=sys.stderr)
+        print(
+            "The dataset changed since tuning (hash mismatch); re-run tune first.", file=sys.stderr
+        )
         return 2
     results_path = args.out / "benchmark_results.json"
     previous = json.loads(results_path.read_text()) if results_path.exists() else None
     if previous and previous.get("config_hash") == frozen["config_hash"] and not args.reproduce:
-        print("Test results for this frozen configuration already exist; the test split is evaluated once. Use --reproduce to check them.", file=sys.stderr)
+        print(
+            "Test results for this frozen configuration already exist; the test split is evaluated once. Use --reproduce to check them.",
+            file=sys.stderr,
+        )
         return 3
 
     sizes = tuple(int(x) for x in args.latency_sizes.split(",") if x)
-    report = evaluate_test(dataset, make_embedder(args.backend), frozen, () if args.reproduce else sizes)
+    report = evaluate_test(
+        dataset, make_embedder(args.backend), frozen, () if args.reproduce else sizes
+    )
     if args.reproduce:
         same = previous is not None and _comparable(previous) == _comparable(report)
         print("REPRODUCED: identical numbers" if same else "DIFFERENT from the saved results")
         return 0 if same else 1
     write_results(report, args.out)
-    print(json.dumps({k: report["systems"][k]["metrics"]["mrr"] for k in report["systems"]}, indent=2))
+    print(
+        json.dumps({k: report["systems"][k]["metrics"]["mrr"] for k in report["systems"]}, indent=2)
+    )
     print(report["hypothesis_h1"]["outcome"])
     return 0
 

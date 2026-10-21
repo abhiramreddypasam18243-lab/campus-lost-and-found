@@ -69,7 +69,18 @@ ITEM_TERMS = {
     "accessory": ("sunglasses", "shades"),
     "other": ("umbrella", "folding umbrella"),
 }
-BRANDS = ["HydroFlask", "Nike", "Dell", "Sony", "Apple", "NorthFace", "Moleskine", "Anker", "Casio", "Puma"]
+BRANDS = [
+    "HydroFlask",
+    "Nike",
+    "Dell",
+    "Sony",
+    "Apple",
+    "NorthFace",
+    "Moleskine",
+    "Anker",
+    "Casio",
+    "Puma",
+]
 FEATURES = [
     ("a scratch on the corner", "scratched corner"),
     ("a blue sticker on the back", "sticker on the back"),
@@ -239,7 +250,9 @@ def generate_benchmark_dataset(seed: int = 42) -> BenchmarkDataset:
             found_at = lost_actual + delay
             lost_start, lost_end = _lost_window(rng, lost_actual)
 
-            lost_title, lost_desc = _describe(rng, "lost", color_lost, term_lost, brand, feature_lost)
+            lost_title, lost_desc = _describe(
+                rng, "lost", color_lost, term_lost, brand, feature_lost
+            )
             found_title, found_desc = _describe(
                 rng, "found", color_found, term_found, brand, feature_found
             )

@@ -304,49 +304,55 @@ async def trigger_retention_sweep(
 
 
 class AdminEvaluationResponse(BaseModel):
+    """Saved benchmark results (eval/results/benchmark_results.json), shown as recorded."""
+
     model_config = ConfigDict(extra="forbid")
 
+    status: str
     timestamp: str
     seed: int
     dataset_hash: str
+    dev_hash: str
     config_hash: str
     git_commit: str
     hardware: dict[str, Any]
-    models: dict[str, str]
+    models: dict[str, Any]
     weights: dict[str, float]
+    tuning: dict[str, Any]
     systems: dict[str, Any]
+    not_evaluated: list[dict[str, str]]
     hypothesis_h1: dict[str, Any]
+    exploratory: dict[str, Any]
     real_photo_subset: dict[str, Any]
     ablations: dict[str, Any]
     latency_benchmark: dict[str, Any]
+    limitations: list[str]
+    pool: dict[str, int]
+
+
+def _results_path() -> Path | None:
+    candidates = [
+        Path("/app/eval/results/benchmark_results.json"),
+        Path(__file__).resolve().parents[3] / "eval" / "results" / "benchmark_results.json",
+        Path("eval/results/benchmark_results.json"),
+    ]
+    return next((p for p in candidates if p.exists()), None)
 
 
 @router.get("/evaluation", response_model=AdminEvaluationResponse)
 async def get_admin_evaluation(
     current_admin: User = Depends(require_admin_user),
 ) -> AdminEvaluationResponse:
-    """AC-123: View latest saved retrieval evaluation benchmark results.
+    """AC-123: the latest saved results, produced offline by `python -m eval.runner final`.
 
-    Never evaluates on live private data.
+    The web service never runs an evaluation and never touches live data; if no results have
+    been saved yet it says so (404 no_results).
     """
-    results_paths = [
-        Path("/app/eval/results/benchmark_results.json"),
-        Path(__file__).resolve().parent.parent.parent.parent / "eval" / "results" / "benchmark_results.json",
-        Path("eval/results/benchmark_results.json"),
-    ]
-    data = None
-    for p in results_paths:
-        if p.exists():
-            try:
-                data = json.loads(p.read_text(encoding="utf-8"))
-                break
-            except Exception:
-                continue
-
-    if not data:
-        from eval.runner import run_full_evaluation
-
-        data = run_full_evaluation()
-
+    path = _results_path()
+    if path is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "no_results", "message": "No saved evaluation results yet."},
+        )
+    data = json.loads(path.read_text(encoding="utf-8"))
     return AdminEvaluationResponse(**data)
-

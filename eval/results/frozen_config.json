@@ -1,27 +1,58 @@
 {
-  "weights": {
-    "w_text": 0.7,
-    "w_photo": 0.2,
-    "w_location": 0.05,
-    "w_time": 0.05
-  },
+  "config_hash": "b3cd10219475bbf16a66127684d956547ef99c0af2560028fccb4ec8c94294dc",
+  "dev_hash": "1692f8753287ccdf24d4b7ca6a642191ee44dc71f5958d339350b51cc834311c",
+  "dev_items": 90,
   "learned_fusion": {
+    "coef_standardised": [
+      1.756145,
+      0.980961,
+      1.400034
+    ],
+    "dev_mrr": 0.98,
+    "feature_mean": [
+      0.241379,
+      0.336906,
+      0.045182
+    ],
+    "feature_std": [
+      0.118682,
+      0.20429,
+      0.158329
+    ],
+    "features": [
+      "text",
+      "location",
+      "time"
+    ],
+    "intercept": -7.55737,
     "model_type": "logistic_regression",
-    "weights": {
-      "text_coef": 2.85,
-      "photo_coef": 2.45,
-      "location_coef": 1.65,
-      "time_coef": 1.1,
-      "has_photo_bias": 0.15,
-      "intercept": -3.2
-    },
-    "training_samples": 90,
-    "split": "dev"
+    "positive_pairs": 90,
+    "split": "dev",
+    "training_pairs": 17100
   },
+  "models": {
+    "backend": "model",
+    "image_embedding": null,
+    "text_embedding": "all-MiniLM-L6-v2@1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+  },
+  "protocol_version": "2.0",
   "seed": 42,
-  "dataset_test_hash": "2d8bb4d3e49586131ba2cbbc03e6c947af6d631bc953751fd8820f87a7c84565",
-  "dev_items_count": 90,
-  "test_items_count": 210,
-  "version": "1.0.0-frozen",
-  "config_hash": "593848fdab7e97bda877c07a464b96ab8bce478f40cbebc0edfe7010b3e62185"
+  "test_hash": "894d2bae171ffe58ea735846ddbaea6f226b09d51672f28b8a78bc58434dbac5",
+  "test_items": 210,
+  "tuning": {
+    "dev_mrr": 0.9903,
+    "dev_mrr_initial_weights": 0.9788,
+    "grid_points": 231,
+    "step": 0.05,
+    "weights": {
+      "location": 0.3,
+      "text": 0.4,
+      "time": 0.3
+    }
+  },
+  "weights": {
+    "location": 0.3,
+    "text": 0.4,
+    "time": 0.3
+  }
 }

@@ -12,6 +12,7 @@ from app.core.database import get_db
 from app.domain.claims import is_claim_escalated
 from app.models.claims import Claim
 from app.models.notifications import Notification
+from app.models.report import ItemReport
 from app.models.user import User
 from app.schemas.claims import ClaimCreate, ClaimEvidenceUpdate, ClaimResponse
 from app.services import claims as claim_service
@@ -19,7 +20,9 @@ from app.services import claims as claim_service
 router = APIRouter(prefix="/api/claims", tags=["claims"])
 
 
-def to_claim_response(claim: Claim, handover_code: str | None = None) -> ClaimResponse:
+def to_claim_response(
+    claim: Claim, handover_code: str | None = None, found_title: str | None = None
+) -> ClaimResponse:
     now = datetime.now(UTC)
     escalated = is_claim_escalated(claim.submitted_at, now, claim.status)
     return ClaimResponse(
@@ -39,8 +42,19 @@ def to_claim_response(claim: Claim, handover_code: str | None = None) -> ClaimRe
         reviewed_at=claim.reviewed_at,
         escalated=escalated,
         handover_code=handover_code,
+        found_title=found_title,
         created_at=claim.created_at,
     )
+
+
+async def _found_titles(db: AsyncSession, found_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+    """Titles of the claimed items (public field), so a claimant can tell claims apart."""
+    if not found_ids:
+        return {}
+    rows = await db.execute(
+        select(ItemReport.id, ItemReport.title).where(ItemReport.id.in_(found_ids))
+    )
+    return {rid: title for rid, title in rows.all()}
 
 
 @router.post(
@@ -91,7 +105,13 @@ async def list_my_claims(
         if cid and code and cid not in claim_code_map:
             claim_code_map[cid] = code
 
-    return [to_claim_response(c, handover_code=claim_code_map.get(str(c.id))) for c in claims]
+    titles = await _found_titles(db, [c.found_id for c in claims])
+    return [
+        to_claim_response(
+            c, handover_code=claim_code_map.get(str(c.id)), found_title=titles.get(c.found_id)
+        )
+        for c in claims
+    ]
 
 
 @router.get(
@@ -123,7 +143,10 @@ async def get_claim(
             if notif.payload.get("claim_id") == str(claim.id):
                 handover_code = notif.payload.get("handover_code")
                 break
-    return to_claim_response(claim, handover_code=handover_code)
+    titles = await _found_titles(db, [claim.found_id])
+    return to_claim_response(
+        claim, handover_code=handover_code, found_title=titles.get(claim.found_id)
+    )
 
 
 @router.post(

@@ -16,6 +16,7 @@ from app.models.jobs import WorkerHeartbeat
 from app.services.embedder import get_embedder
 from app.services.handover import expire_stale_handovers
 from app.services.job_runner import process_available_jobs
+from app.services.outbox import deliver_pending_emails
 from app.services.retention import expire_unclaimed_reports, purge_closed_images
 
 logging.basicConfig(
@@ -78,6 +79,7 @@ async def run_worker_loop() -> None:
                 await run_maintenance()
                 last_maintenance = time.monotonic()
             claimed = await process_available_jobs(AsyncSessionLocal, embedder, worker_id)
+            claimed += await deliver_pending_emails(AsyncSessionLocal)
         except Exception as exc:  # keep the loop alive; the error type is enough to debug
             logger.error("worker iteration failed: %s", type(exc).__name__)
             claimed = 0

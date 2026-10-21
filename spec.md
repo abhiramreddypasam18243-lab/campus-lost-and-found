@@ -735,6 +735,7 @@ The benchmark generator, the metrics and the statistics in step 12 depend only o
 | D-17 | 2026-10-18 | Email-only identity with a campus-domain restriction | Collect phone numbers or student IDs | Data minimisation |
 | D-18 | 2026-10-20 | Automated face and license plate blurring in photo pipeline | Unredacted photo storage; external cloud vision APIs | Protects bystander and student privacy by smoothing sensitive biometric and vehicle zones before disk persistence without leaking images to third-party APIs |
 | D-19 | 2026-10-21 | A report's CLIP text vector is stored in `image_embeddings` (entity = report id, model name `clip-ViT-B-32:text`) and drives the text-to-image signal | A new table; computing CLIP text vectors at match time | Same 512-d space as photo vectors, no schema change, matching stays a pure vector comparison |
+| D-20 | 2026-10-21 | A signed-in user starting a claim sees the finder's verification questions through a claim-form endpoint; listings and detail views never include them | Keep prompts hidden (AC-75 cannot be satisfied); show prompts publicly | Resolves the P1 / AC-75 conflict: the answers are the secret, not the questions (pending owner confirmation) |
 
 ## 21. Open Questions
 

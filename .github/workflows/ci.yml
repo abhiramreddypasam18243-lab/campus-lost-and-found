@@ -47,6 +47,12 @@ jobs:
           cd backend
           mypy .
 
+      - name: OpenAPI document is up to date (AC-133)
+        run: |
+          cd backend
+          python scripts/export_openapi.py ../frontend/src/api/openapi.json
+          git diff --exit-code -- ../frontend/src/api/openapi.json
+
       - name: Run Alembic Check
         env:
           DATABASE_URL: postgresql+asyncpg://campus_user:campus_secure_password@localhost:5432/campus_lost_and_found
@@ -78,6 +84,12 @@ jobs:
         run: |
           cd frontend
           npm ci
+
+      - name: Generated API types are up to date (AC-133)
+        run: |
+          cd frontend
+          npm run gen:api
+          git diff --exit-code -- src/api/schema.d.ts
 
       - name: Run Frontend Lint & Typecheck
         run: |

@@ -24,16 +24,31 @@ from app.core.security import (
 )
 from app.models.user import EmailToken, Session, User
 from app.schemas.auth import (
+    CsrfResponse,
     LoginRequest,
     LoginResponse,
     RegisterRequest,
+    UpdateMeRequest,
     UserResponse,
     VerifyEmailRequest,
 )
 from app.services.audit import write_audit_log
+from app.services.mailer import send_verification_email
 
 router = APIRouter(prefix="/api", tags=["auth"])
 settings = get_settings()
+
+
+def _user_response(user: User) -> UserResponse:
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        role=user.role,
+        email_verified=user.email_verified_at is not None,
+        notify_match_email=user.notify_match_email,
+        created_at=user.created_at,
+    )
 
 
 @router.post("/auth/register", status_code=status.HTTP_201_CREATED)
@@ -97,6 +112,10 @@ async def register(
         summary={"email": email_clean},
     )
     await db.commit()
+
+    # Sent after commit so a mail outage never loses the account; a failure is logged
+    # (never the token or the address) and registration still succeeds.
+    await send_verification_email(email_clean, raw_token)
 
     return {"message": "Account created. Verification link sent to email.", "email": email_clean}
 
@@ -221,14 +240,7 @@ async def login(
     response.headers["X-CSRF-Token"] = raw_csrf_token
 
     return LoginResponse(
-        user=UserResponse(
-            id=user.id,
-            email=user.email,
-            display_name=user.display_name,
-            role=user.role,
-            email_verified=user.email_verified_at is not None,
-            created_at=user.created_at,
-        ),
+        user=_user_response(user),
         csrf_token=raw_csrf_token,
     )
 
@@ -253,14 +265,44 @@ async def logout(
 @router.get("/me", response_model=UserResponse)
 async def get_me(user: User = Depends(require_authenticated_user)) -> UserResponse:
     """Return authenticated caller's profile."""
-    return UserResponse(
-        id=user.id,
-        email=user.email,
-        display_name=user.display_name,
-        role=user.role,
-        email_verified=user.email_verified_at is not None,
-        created_at=user.created_at,
-    )
+    return _user_response(user)
+
+
+@router.patch("/me", response_model=UserResponse, dependencies=[Depends(verify_csrf)])
+async def update_me(
+    req: UpdateMeRequest,
+    user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    """Spec 9 / AC-72: update display name and the match-email preference."""
+    if req.display_name is not None:
+        user.display_name = req.display_name.strip() or None
+    if req.notify_match_email is not None:
+        user.notify_match_email = req.notify_match_email
+    await db.commit()
+    return _user_response(user)
+
+
+@router.get("/auth/csrf", response_model=CsrfResponse)
+async def refresh_csrf_token(
+    session_data: tuple[Session, User] | None = Depends(get_current_session_and_user),
+    db: AsyncSession = Depends(get_db),
+) -> CsrfResponse:
+    """Issue a fresh CSRF token for the current session (e.g. after a page reload).
+
+    Only the hash is stored. The response is readable only by same-origin scripts (CORS is
+    limited to the configured origin), so a cross-site page cannot obtain the token.
+    """
+    if session_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "unauthorized", "message": "Authentication required."},
+        )
+    session, _ = session_data
+    raw_csrf_token = generate_secure_token(32)
+    session.csrf_token_hash = hash_token(raw_csrf_token)
+    await db.commit()
+    return CsrfResponse(csrf_token=raw_csrf_token)
 
 
 @router.get("/me/export")

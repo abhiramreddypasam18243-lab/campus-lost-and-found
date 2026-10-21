@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     SMTP_HOST: str = "localhost"
     SMTP_PORT: int = 1025
     SMTP_FROM: str = "no-reply@campus.edu"
+    # Base URL of the web app, used in emailed links (verification)
+    APP_BASE_URL: str = "http://localhost:8080"
 
     # Retention Periods (in days)
     RETENTION_UNCLAIMED_FOUND_DAYS: int = 90

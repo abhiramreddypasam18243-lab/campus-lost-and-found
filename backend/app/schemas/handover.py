@@ -49,3 +49,18 @@ class HandoverVerifyResponse(BaseModel):
     found_id: uuid.UUID
     status: str
     message: str
+
+
+class HandoverDeskItem(BaseModel):
+    """One pending handover at the desk. Never contains the code or its HMAC (AC-96)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    claim_id: uuid.UUID
+    found_id: uuid.UUID
+    found_title: str
+    status: str
+    attempts_left: int
+    expires_at: datetime
+    is_expired: bool
+    is_locked: bool

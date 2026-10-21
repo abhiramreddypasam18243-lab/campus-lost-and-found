@@ -41,7 +41,23 @@ class UserResponse(BaseModel):
     display_name: str | None
     role: str
     email_verified: bool
+    notify_match_email: bool = True
     created_at: datetime
+
+
+class UpdateMeRequest(BaseModel):
+    """Profile fields a user may change themselves (P3: no other personal data)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    display_name: str | None = Field(default=None, max_length=100)
+    notify_match_email: bool | None = None
+
+
+class CsrfResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str
 
 
 class LoginResponse(BaseModel):

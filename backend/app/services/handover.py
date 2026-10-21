@@ -22,7 +22,11 @@ from app.models.claims import Claim
 from app.models.handover import Handover
 from app.models.report import ItemReport
 from app.models.user import User
-from app.schemas.handover import HandoverStatusResponse, HandoverVerifyResponse
+from app.schemas.handover import (
+    HandoverDeskItem,
+    HandoverStatusResponse,
+    HandoverVerifyResponse,
+)
 from app.services.audit import write_audit_log
 from app.services.notification import create_notification
 
@@ -475,3 +479,31 @@ async def expire_stale_handovers(db: AsyncSession, current_time: datetime | None
     if count > 0:
         await db.commit()
     return count
+
+
+async def list_desk_handovers(
+    db: AsyncSession, current_time: datetime | None = None
+) -> list[HandoverDeskItem]:
+    """Handovers waiting at the desk (issued or locked), soonest expiry first."""
+    now = current_time or get_utcnow()
+    stmt = (
+        select(Handover, Claim.found_id, ItemReport.title)
+        .join(Claim, Claim.id == Handover.claim_id)
+        .join(ItemReport, ItemReport.id == Claim.found_id)
+        .where(Handover.status.in_(["issued", "locked"]))
+        .order_by(Handover.expires_at.asc())
+    )
+    rows = (await db.execute(stmt)).all()
+    return [
+        HandoverDeskItem(
+            claim_id=h.claim_id,
+            found_id=found_id,
+            found_title=title,
+            status=h.status,
+            attempts_left=max(0, h.max_attempts - h.attempts),
+            expires_at=h.expires_at,
+            is_expired=not is_code_valid_at_time(h.issued_at, now),
+            is_locked=h.attempts >= h.max_attempts or h.status == "locked",
+        )
+        for h, found_id, title in rows
+    ]

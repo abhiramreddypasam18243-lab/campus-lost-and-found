@@ -12,8 +12,13 @@ from app.core.rate_limit import browse_rate_limiter
 from app.domain.categories import is_sensitive_category
 from app.models.report import ItemImage, ItemReport
 from app.models.user import User
+from app.schemas.claims import ClaimFormResponse
 from app.schemas.found import PublicFoundItemListResponse, PublicFoundItemSummary
-from app.services.location import get_descendant_location_ids, resolve_buildings_batch
+from app.services.location import (
+    get_descendant_location_ids,
+    resolve_building_for_location,
+    resolve_buildings_batch,
+)
 
 router = APIRouter(prefix="/api/found", tags=["found"])
 
@@ -163,3 +168,39 @@ async def list_found_items(
         )
 
     return PublicFoundItemListResponse(items=items, next_cursor=next_cursor)
+
+
+@router.get("/{found_id}/claim-form", response_model=ClaimFormResponse)
+async def get_claim_form(
+    found_id: uuid.UUID,
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db),
+) -> ClaimFormResponse:
+    """D-20: the verification questions a claimant must answer (AC-75).
+
+    Shown only here, to a signed-in user who could claim the item; listings and detail views
+    never include them (P1). The item's own reporter and non-open items get 404.
+    """
+    is_limited, retry_after = browse_rate_limiter.check_and_record(str(current_user.id))
+    if is_limited:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={"code": "rate_limited", "message": "Browse rate limit exceeded (120 req/min)"},
+            headers={"Retry-After": str(retry_after)},
+        )
+    report = await db.get(ItemReport, found_id)
+    if (
+        report is None
+        or report.type != "found"
+        or report.status != "open"
+        or report.reporter_id == current_user.id
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="report_not_found")
+    _, building = await resolve_building_for_location(db, report.location_id)
+    return ClaimFormResponse(
+        found_id=report.id,
+        title=report.title,
+        category=report.category,
+        building=building,
+        verification_prompts=[p for p in (report.verification_prompts or []) if p.strip()],
+    )

@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.auth import require_authenticated_user, verify_csrf
 from app.core.config import get_settings
@@ -219,6 +220,22 @@ async def create_found_report(
     await db.refresh(report)
 
     return _to_report_response(report, current_user)
+
+
+@router.get("/mine", response_model=list[ReportResponse])
+async def list_my_reports(
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[ReportResponse]:
+    """Spec 9: the caller's own lost and found reports, newest first (owner view)."""
+    stmt = (
+        select(ItemReport)
+        .options(selectinload(ItemReport.images))
+        .where(ItemReport.reporter_id == current_user.id)
+        .order_by(ItemReport.created_at.desc())
+    )
+    reports = (await db.execute(stmt)).scalars().all()
+    return [_to_report_response(r, current_user) for r in reports]
 
 
 @router.get(

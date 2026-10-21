@@ -58,6 +58,7 @@ class ClaimResponse(BaseModel):
     reviewed_at: datetime | None = None
     escalated: bool = False
     handover_code: str | None = None
+    found_title: str | None = None
     created_at: datetime
 
 
@@ -84,3 +85,16 @@ class ModeratorQueueResponse(BaseModel):
 
     items: list[ModeratorQueueItem]
     total: int
+
+
+class ClaimFormResponse(BaseModel):
+    """What a claimant needs to file a claim (D-20): the public summary plus the finder's
+    verification questions. Never the private details, exact location or reporter."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    found_id: uuid.UUID
+    title: str
+    category: str
+    building: str | None
+    verification_prompts: list[str]

@@ -23,6 +23,8 @@ services:
       dockerfile: Dockerfile
     container_name: campus_lost_and_found_backend
     restart: unless-stopped
+    # D3: migrations are applied on every start, so `docker compose up -d` is the only step.
+    command: ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - SECRET_KEY=${SECRET_KEY}

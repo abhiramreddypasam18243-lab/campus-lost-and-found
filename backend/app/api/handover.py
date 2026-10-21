@@ -9,6 +9,7 @@ from app.core.auth import require_role, verify_csrf
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.handover import (
+    HandoverDeskItem,
     HandoverReissueRequest,
     HandoverStatusResponse,
     HandoverVerificationRequest,
@@ -17,6 +18,15 @@ from app.schemas.handover import (
 from app.services import handover as handover_service
 
 router = APIRouter(prefix="/api/mod/handovers", tags=["handovers"])
+
+
+@router.get("", response_model=list[HandoverDeskItem])
+async def list_handovers(
+    current_user: User = Depends(require_role("moderator", "admin")),
+    db: AsyncSession = Depends(get_db),
+) -> list[HandoverDeskItem]:
+    """Handover desk: approved claims waiting for collection (no codes, no hashes)."""
+    return await handover_service.list_desk_handovers(db)
 
 
 @router.get(

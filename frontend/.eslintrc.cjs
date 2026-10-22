@@ -6,16 +6,8 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
   ],
-  // Legacy simulated UI (src/App.tsx, src/components, src/i18n, src/index.css) is no longer
-  // imported anywhere; it is excluded until it is deleted. schema.d.ts is generated.
-  ignorePatterns: [
-    'dist',
-    '.eslintrc.cjs',
-    'src/App.tsx',
-    'src/components/**',
-    'src/i18n/**',
-    'src/api/schema.d.ts',
-  ],
+  // schema.d.ts is generated from the OpenAPI document (npm run gen:api).
+  ignorePatterns: ['dist', '.eslintrc.cjs', 'src/api/schema.d.ts'],
   parser: '@typescript-eslint/parser',
   plugins: ['react-refresh'],
   rules: {

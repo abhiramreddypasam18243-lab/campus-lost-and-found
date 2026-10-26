@@ -2,7 +2,7 @@ services:
   - type: web
     name: campus-lost-and-found
     env: docker
-    dockerfilePath: Dockerfile.web
+    dockerfilePath: Dockerfile
     plan: free
     healthCheckPath: /api/health
     envVars:

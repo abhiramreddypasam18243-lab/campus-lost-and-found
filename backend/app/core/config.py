@@ -50,6 +50,9 @@ class Settings(BaseSettings):
             url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         if "sslmode=require" in url:
             url = url.replace("sslmode=require", "ssl=require")
+        elif "sslmode=" in url:
+            import re
+            url = re.sub(r"sslmode=[a-zA-Z0-9_-]+", "ssl=require", url)
         return url
 
     @property
@@ -63,6 +66,10 @@ class Settings(BaseSettings):
             url = url.replace("postgresql://", "postgresql+psycopg://", 1)
         elif url.startswith("postgresql+asyncpg://"):
             url = url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+        if "ssl=require" in url:
+            url = url.replace("ssl=require", "sslmode=require")
+        elif "ssl=true" in url:
+            url = url.replace("ssl=true", "sslmode=require")
         return url
 
     # Mail / SMTP

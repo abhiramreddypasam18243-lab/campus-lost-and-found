@@ -22,7 +22,7 @@ if config.config_file_name is not None:
 
 settings = get_settings()
 # Override sqlalchemy.url with application settings
-config.set_main_option("sqlalchemy.url", settings.SYNC_DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.RESOLVED_SYNC_DATABASE_URL)
 
 target_metadata = Base.metadata
 

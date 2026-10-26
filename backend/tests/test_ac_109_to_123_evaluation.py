@@ -8,13 +8,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.api import admin as admin_api
-from app.core.security import hash_token
-from app.domain.matching import calculate_hybrid_score
-from app.models.user import Session, User
 from eval.bm25 import BM25Index
 from eval.generator import generate_benchmark_dataset
 from eval.metrics import (
@@ -28,6 +21,13 @@ from eval.runner import evaluate_test, make_embedder, pools, run_full_evaluation
 from eval.signals import compute_signals, standin_text_embedder
 from eval.stats import bootstrap_ci, paired_bootstrap_ci
 from eval.systems import hybrid_matrix, ranks_from_scores
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api import admin as admin_api
+from app.core.security import hash_token
+from app.domain.matching import calculate_hybrid_score
+from app.models.user import Session, User
 
 
 async def create_user_and_cookie(

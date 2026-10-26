@@ -39,6 +39,31 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     DATABASE_URL: str = "postgresql+asyncpg://campus_user:campus_secure_password@localhost:5432/campus_lost_and_found"
     SYNC_DATABASE_URL: str = "postgresql+psycopg://campus_user:campus_secure_password@localhost:5432/campus_lost_and_found"
+    RUN_WORKER_IN_PROCESS: bool = False
+
+    @property
+    def ASYNC_DATABASE_URL(self) -> str:
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://") and not url.startswith("postgresql+"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if "sslmode=require" in url:
+            url = url.replace("sslmode=require", "ssl=require")
+        return url
+
+    @property
+    def RESOLVED_SYNC_DATABASE_URL(self) -> str:
+        url = self.SYNC_DATABASE_URL
+        if not url or url == "postgresql+psycopg://campus_user:campus_secure_password@localhost:5432/campus_lost_and_found":
+            url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+psycopg://", 1)
+        elif url.startswith("postgresql://") and not url.startswith("postgresql+"):
+            url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+        elif url.startswith("postgresql+asyncpg://"):
+            url = url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+        return url
 
     # Mail / SMTP
     SMTP_HOST: str = "localhost"

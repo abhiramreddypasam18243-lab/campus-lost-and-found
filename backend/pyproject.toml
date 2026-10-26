@@ -22,7 +22,7 @@ dependencies = [
 
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = [".", ".."]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = ["slow: uses the real baked models (run with `pytest -m slow` in the backend image)"]
@@ -41,5 +41,5 @@ ignore = ["B008", "E501"]
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
-exclude = ["alembic/", "\\.venv/"]
+exclude = ["alembic/", "\\.venv/", "tests/"]
 

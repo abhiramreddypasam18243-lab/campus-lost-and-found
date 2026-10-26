@@ -1,9 +1,12 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api import (
@@ -66,7 +69,23 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifecycle management."""
-    yield
+    worker_task = None
+    if settings.RUN_WORKER_IN_PROCESS:
+        try:
+            from app.worker.main import run_worker_loop
+
+            worker_task = asyncio.create_task(run_worker_loop())
+        except Exception:
+            pass
+    try:
+        yield
+    finally:
+        if worker_task:
+            worker_task.cancel()
+            try:
+                await worker_task
+            except (asyncio.CancelledError, Exception):
+                pass
 
 
 app = FastAPI(
@@ -104,3 +123,36 @@ app.include_router(handover.router)
 app.include_router(moderation.router)
 app.include_router(admin.router)
 app.include_router(dashboard.router)
+
+# Mount Frontend SPA if frontend/dist exists
+frontend_dist_candidates = [
+    Path(__file__).resolve().parent.parent.parent / "frontend" / "dist",
+    Path("/app/frontend/dist"),
+    Path(__file__).resolve().parent.parent / "frontend" / "dist",
+]
+frontend_dist = next(
+    (p for p in frontend_dist_candidates if p.exists() and (p / "index.html").exists()), None
+)
+
+if frontend_dist is not None:
+    dist_dir: Path = frontend_dist
+    assets_dir = dist_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="frontend_assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(request: Request, full_path: str) -> Response:
+        if (
+            full_path.startswith("api/")
+            or full_path == "api"
+            or full_path.startswith("docs")
+            or full_path.startswith("openapi.json")
+        ):
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content={"code": "not_found", "message": "Not found"},
+            )
+        target_file = dist_dir / full_path
+        if target_file.is_file():
+            return FileResponse(target_file)
+        return FileResponse(dist_dir / "index.html")

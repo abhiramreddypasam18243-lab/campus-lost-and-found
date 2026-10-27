@@ -1,3 +1,4 @@
+import secrets
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -95,15 +96,24 @@ async def register(
     db.add(new_user)
     await db.flush()
 
-    # Create verification token (expires in 24 hours per AC-02)
+    # Create verification token & 6-digit code (expires in 24 hours per AC-02)
     raw_token = generate_secure_token()
+    raw_code = f"{secrets.randbelow(900000) + 100000}"
+    expires_at = utc_now() + timedelta(hours=24)
     token_entry = EmailToken(
         user_id=new_user.id,
         token_hash=hash_token(raw_token),
         purpose="verify_email",
-        expires_at=utc_now() + timedelta(hours=24),
+        expires_at=expires_at,
+    )
+    code_entry = EmailToken(
+        user_id=new_user.id,
+        token_hash=hash_token(raw_code),
+        purpose="verify_email",
+        expires_at=expires_at,
     )
     db.add(token_entry)
+    db.add(code_entry)
 
     await write_audit_log(
         db=db,
@@ -118,11 +128,12 @@ async def register(
 
     # Sent after commit so a mail outage never loses the account; a failure is logged
     # (never the token or the address) and registration still succeeds.
-    await send_verification_email(email_clean, raw_token)
+    await send_verification_email(email_clean, raw_token, raw_code)
 
     return RegisterResponse(
-        message="Account created. Verification link sent to email.",
+        message="Account created. Verification code sent to email.",
         email=email_clean,
+        verification_code=raw_code,
         verification_url=f"/#/verify?token={raw_token}",
     )
 
@@ -132,24 +143,34 @@ async def resend_verification(
     current_user: User = Depends(require_authenticated_user),
     db: AsyncSession = Depends(get_db),
 ) -> ResendVerificationResponse:
-    """AC-02: Resend email verification link for the currently logged-in user."""
+    """AC-02: Resend email verification code for the currently logged-in user."""
     if current_user.email_verified_at is not None:
         return ResendVerificationResponse(message="Email is already verified.")
 
     raw_token = generate_secure_token()
+    raw_code = f"{secrets.randbelow(900000) + 100000}"
+    expires_at = utc_now() + timedelta(hours=24)
     token_entry = EmailToken(
         user_id=current_user.id,
         token_hash=hash_token(raw_token),
         purpose="verify_email",
-        expires_at=utc_now() + timedelta(hours=24),
+        expires_at=expires_at,
+    )
+    code_entry = EmailToken(
+        user_id=current_user.id,
+        token_hash=hash_token(raw_code),
+        purpose="verify_email",
+        expires_at=expires_at,
     )
     db.add(token_entry)
+    db.add(code_entry)
     await db.commit()
 
-    await send_verification_email(current_user.email, raw_token)
+    await send_verification_email(current_user.email, raw_token, raw_code)
 
     return ResendVerificationResponse(
-        message="Verification link generated.",
+        message="Verification code sent to email.",
+        verification_code=raw_code,
         verification_url=f"/#/verify?token={raw_token}",
     )
 
@@ -159,8 +180,15 @@ async def verify_email(
     req: VerifyEmailRequest,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
-    """AC-02: Verify email using single-use token."""
-    token_hash = hash_token(req.token)
+    """AC-02: Verify email using single-use 6-digit code or link token."""
+    submitted = (req.code or req.token or "").strip()
+    if not submitted:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={"code": "missing_code", "message": "Verification code is required."},
+        )
+
+    token_hash = hash_token(submitted)
     now = utc_now()
 
     stmt = select(EmailToken).where(
@@ -169,18 +197,27 @@ async def verify_email(
     )
     token_entry = (await db.execute(stmt)).scalar_one_or_none()
 
-    # Reused or expired link returns 410 per AC-02
+    # Reused or expired code/token returns 410 per AC-02
     if not token_entry or token_entry.used_at is not None or token_entry.expires_at < now:
         raise HTTPException(
             status_code=status.HTTP_410_GONE,
             detail={
                 "code": "token_expired_or_invalid",
-                "message": "Verification link has expired or been used.",
+                "message": "Verification code has expired or been used.",
             },
         )
 
-    # Mark token used and user verified
+    # Mark all active verification tokens for this user as used
     token_entry.used_at = now
+    stmt_tokens = select(EmailToken).where(
+        EmailToken.user_id == token_entry.user_id,
+        EmailToken.purpose == "verify_email",
+        EmailToken.used_at.is_(None),
+    )
+    all_user_tokens = (await db.execute(stmt_tokens)).scalars().all()
+    for t in all_user_tokens:
+        t.used_at = now
+
     stmt_user = select(User).where(User.id == token_entry.user_id)
     user = (await db.execute(stmt_user)).scalar_one()
     user.email_verified_at = now

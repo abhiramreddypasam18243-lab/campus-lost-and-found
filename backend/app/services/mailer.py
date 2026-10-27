@@ -41,17 +41,26 @@ async def send_email(
     await asyncio.to_thread(_send_sync, to_address, subject, body, message_id)
 
 
-async def send_verification_email(to_address: str, raw_token: str) -> bool:
-    """AC-02: email the single-use verification link. Returns False if delivery failed."""
+async def send_verification_email(
+    to_address: str, raw_token: str, raw_code: str | None = None
+) -> bool:
+    """AC-02: email the single-use verification code and link. Returns False if delivery failed."""
     settings = get_settings()
     link = f"{settings.APP_BASE_URL.rstrip('/')}/#/verify?token={quote(raw_token)}"
+    code_block = (
+        f"\nYour 6-digit verification code is:\n  {raw_code}\n\nEnter this code on the website to activate your account.\n"
+        if raw_code
+        else ""
+    )
     body = (
         "Welcome to the Campus Lost and Found network.\n\n"
-        f"Confirm your campus email address by opening this link:\n{link}\n\n"
-        "The link works once and expires in 24 hours. If you did not register, ignore this email."
+        f"{code_block}\n"
+        f"You can also confirm your campus email address by opening this link:\n{link}\n\n"
+        "The code and link work once and expire in 24 hours. If you did not register, ignore this email."
     )
+    subject = f"Your verification code: {raw_code}" if raw_code else "Confirm your campus email"
     try:
-        await send_email(to_address, "Confirm your campus email", body)
+        await send_email(to_address, subject, body)
     except Exception as exc:
         logger.warning("verification email not sent: %s", type(exc).__name__)
         return False

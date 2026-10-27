@@ -192,23 +192,49 @@ function Routes({ route }: { route: Route }) {
 
 function VerifyBanner() {
   const { user, refresh } = useAuth()
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
+  const [code, setCode] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [statusMsg, setStatusMsg] = useState<{ tone: 'danger' | 'info' | 'success'; text: string } | null>(null)
   if (!user || user.email_verified) return null
 
-  const handleVerifyNow = async () => {
-    setBusy(true)
-    setErr(null)
+  const handleVerifyCode = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const clean = code.trim()
+    if (!clean) {
+      setStatusMsg({ tone: 'danger', text: 'Please enter your verification code.' })
+      return
+    }
+    setSubmitting(true)
+    setStatusMsg(null)
     try {
-      const res = await api.post<{ verification_url?: string }>('/api/auth/resend-verification')
-      if (res.verification_url) {
-        navigate(res.verification_url.replace('/#', ''))
-        await refresh()
+      await api.post('/api/auth/verify-email', { token: clean })
+      setStatusMsg({ tone: 'success', text: 'Email verified successfully!' })
+      await refresh()
+    } catch {
+      setStatusMsg({ tone: 'danger', text: 'Invalid or expired verification code.' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    setResending(true)
+    setStatusMsg(null)
+    try {
+      const res = await api.post<{ verification_code?: string }>('/api/auth/resend-verification')
+      if (res.verification_code) {
+        setStatusMsg({
+          tone: 'info',
+          text: `Verification code: ${res.verification_code} (Enter this code above to verify)`,
+        })
+      } else {
+        setStatusMsg({ tone: 'info', text: 'Verification code resent to your email.' })
       }
     } catch {
-      setErr('Unable to generate verification link.')
+      setStatusMsg({ tone: 'danger', text: 'Unable to resend verification code.' })
     } finally {
-      setBusy(false)
+      setResending(false)
     }
   }
 
@@ -216,14 +242,35 @@ function VerifyBanner() {
     <div className="container" style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
       <Alert tone="warning" title="Confirm your campus email">
         <p style={{ margin: 0 }}>
-          Open the verification link we emailed to <strong>{user.email}</strong> to report items and make claims.
+          Enter the 6-digit verification code sent to <strong>{user.email}</strong> to report items and make claims.
         </p>
-        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <Button type="button" size="sm" busy={busy} onClick={handleVerifyNow}>
-            Verify Email Now (Instant Verification)
+        <form
+          onSubmit={handleVerifyCode}
+          style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}
+        >
+          <input
+            type="text"
+            className="input"
+            style={{ width: '150px', letterSpacing: '2px', fontWeight: 'bold', textAlign: 'center', padding: '0.35rem 0.5rem' }}
+            placeholder="6-digit code"
+            maxLength={32}
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+          <Button type="submit" size="sm" busy={submitting}>
+            Verify Code
           </Button>
-          {err && <span className="small text-danger">{err}</span>}
-        </div>
+          <Button type="button" variant="ghost" size="sm" busy={resending} onClick={handleResendCode}>
+            Resend Code
+          </Button>
+        </form>
+        {statusMsg && (
+          <div style={{ marginTop: '0.5rem' }}>
+            <span className={`small ${statusMsg.tone === 'danger' ? 'text-danger' : 'muted'}`} style={{ fontWeight: '500' }}>
+              {statusMsg.text}
+            </span>
+          </div>
+        )}
       </Alert>
     </div>
   )

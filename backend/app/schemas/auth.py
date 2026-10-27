@@ -24,29 +24,32 @@ class LoginRequest(BaseModel):
 
 
 class VerifyEmailRequest(BaseModel):
-    """Email verification schema."""
+    """Email verification schema by token or 6-digit numeric code."""
 
     model_config = ConfigDict(extra="forbid")
 
-    token: str = Field(min_length=16, max_length=128)
+    token: str | None = Field(default=None, min_length=4, max_length=128)
+    code: str | None = Field(default=None, min_length=4, max_length=128)
 
 
 class RegisterResponse(BaseModel):
-    """Registration response with optional instant verification URL."""
+    """Registration response with verification code and link."""
 
     model_config = ConfigDict(extra="forbid")
 
     message: str
     email: str
+    verification_code: str | None = None
     verification_url: str | None = None
 
 
 class ResendVerificationResponse(BaseModel):
-    """Resend email verification response with optional instant verification URL."""
+    """Resend email verification response with verification code and link."""
 
     model_config = ConfigDict(extra="forbid")
 
     message: str
+    verification_code: str | None = None
     verification_url: str | None = None
 
 

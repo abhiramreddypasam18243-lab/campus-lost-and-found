@@ -2300,7 +2300,7 @@
       },
       "RegisterResponse": {
         "additionalProperties": false,
-        "description": "Registration response with optional instant verification URL.",
+        "description": "Registration response with verification code and link.",
         "properties": {
           "email": {
             "title": "Email",
@@ -2309,6 +2309,17 @@
           "message": {
             "title": "Message",
             "type": "string"
+          },
+          "verification_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Code"
           },
           "verification_url": {
             "anyOf": [
@@ -2477,11 +2488,22 @@
       },
       "ResendVerificationResponse": {
         "additionalProperties": false,
-        "description": "Resend email verification response with optional instant verification URL.",
+        "description": "Resend email verification response with verification code and link.",
         "properties": {
           "message": {
             "title": "Message",
             "type": "string"
+          },
+          "verification_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Code"
           },
           "verification_url": {
             "anyOf": [
@@ -2666,18 +2688,35 @@
       },
       "VerifyEmailRequest": {
         "additionalProperties": false,
-        "description": "Email verification schema.",
+        "description": "Email verification schema by token or 6-digit numeric code.",
         "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
           "token": {
-            "maxLength": 128,
-            "minLength": 16,
-            "title": "Token",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
           }
         },
-        "required": [
-          "token"
-        ],
         "title": "VerifyEmailRequest",
         "type": "object"
       }
@@ -3453,7 +3492,7 @@
     },
     "/api/auth/resend-verification": {
       "post": {
-        "description": "AC-02: Resend email verification link for the currently logged-in user.",
+        "description": "AC-02: Resend email verification code for the currently logged-in user.",
         "operationId": "resend_verification_api_auth_resend_verification_post",
         "parameters": [
           {
@@ -3503,7 +3542,7 @@
     },
     "/api/auth/verify-email": {
       "post": {
-        "description": "AC-02: Verify email using single-use token.",
+        "description": "AC-02: Verify email using single-use 6-digit code or link token.",
         "operationId": "verify_email_api_auth_verify_email_post",
         "requestBody": {
           "content": {

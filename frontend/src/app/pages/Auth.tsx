@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { api, ApiError } from '../api'
 import { useAuth } from '../auth'
 import { errorMessage } from '../format'
@@ -113,7 +113,11 @@ export function RegisterPage() {
   const [confirm, setConfirm] = useState('')
   const [fields, setFields] = useState<Record<string, string>>({})
   const [error, setError] = useState<unknown>(null)
-  const [done, setDone] = useState<{ email: string; url?: string } | null>(null)
+  const [done, setDone] = useState<{ email: string; code?: string } | null>(null)
+  const [verifyInput, setVerifyInput] = useState('')
+  const [verifying, setVerifying] = useState(false)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
+  const [verifiedSuccess, setVerifiedSuccess] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const submit = async (e: FormEvent) => {
@@ -127,12 +131,12 @@ export function RegisterPage() {
     setBusy(true)
     setError(null)
     try {
-      const res = await api.post<{ email: string; verification_url?: string }>('/api/auth/register', {
+      const res = await api.post<{ email: string; verification_code?: string; verification_url?: string }>('/api/auth/register', {
         email: email.trim(),
         password,
         display_name: name.trim() || null,
       })
-      setDone({ email: email.trim(), url: res.verification_url })
+      setDone({ email: email.trim(), code: res.verification_code })
     } catch (err) {
       if (err instanceof ApiError && err.code === 'email_domain_not_allowed') {
         setFields({ email: errorMessage(err) })
@@ -151,20 +155,59 @@ export function RegisterPage() {
       <div className="narrow">
         <Card>
           <div className="state">
-            <div className="state-icon" aria-hidden="true">📬</div>
-            <h1 className="state-title">Check your inbox</h1>
-            <p className="state-text">
-              We sent a verification link to <strong>{done.email}</strong>. Open it within 24 hours to activate
-              reporting and claims.
-            </p>
-            {done.url && (
-              <div style={{ margin: '1rem 0' }}>
-                <Button onClick={() => navigate(done.url!.replace('/#', ''))}>
-                  Verify email now (Instant Verification)
-                </Button>
+            <div className="state-icon" aria-hidden="true">{verifiedSuccess ? '✅' : '📬'}</div>
+            <h1 className="state-title">{verifiedSuccess ? 'Email confirmed' : 'Verify your campus email'}</h1>
+            {verifiedSuccess ? (
+              <div>
+                <p className="state-text">Your campus email has been verified successfully. You can now sign in.</p>
+                <Button onClick={() => navigate('/login')}>Sign in now</Button>
+              </div>
+            ) : (
+              <div style={{ width: '100%' }}>
+                <p className="state-text">
+                  Enter the 6-digit verification code sent to <strong>{done.email}</strong>.
+                </p>
+                {done.code && (
+                  <Alert tone="info" title="Verification code">
+                    Your code is: <strong>{done.code}</strong> (Enter this code below)
+                  </Alert>
+                )}
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault()
+                    const c = verifyInput.trim()
+                    if (!c) return
+                    setVerifying(true)
+                    setVerifyError(null)
+                    try {
+                      await api.post('/api/auth/verify-email', { token: c })
+                      setVerifiedSuccess(true)
+                    } catch {
+                      setVerifyError('Invalid or expired verification code. Please check and try again.')
+                    } finally {
+                      setVerifying(false)
+                    }
+                  }}
+                  style={{ marginTop: '1rem', textAlign: 'left' }}
+                >
+                  {verifyError && <Alert tone="danger">{verifyError}</Alert>}
+                  <TextField
+                    label="Enter 6-digit code"
+                    placeholder="e.g. 123456"
+                    value={verifyInput}
+                    onChange={(e) => setVerifyInput(e.target.value)}
+                    required
+                    maxLength={32}
+                  />
+                  <Button type="submit" busy={verifying} className="btn-block">
+                    Verify Code
+                  </Button>
+                  <p style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>Skip to sign in</Button>
+                  </p>
+                </form>
               </div>
             )}
-            <Button variant="ghost" onClick={() => navigate('/login')}>Go to sign in</Button>
           </div>
         </Card>
       </div>
@@ -228,25 +271,39 @@ export function RegisterPage() {
 
 export function VerifyPage({ token }: { token: string | null }) {
   const { refresh, user } = useAuth()
-  const [state, setState] = useState<'working' | 'ok' | 'error'>('working')
+  const [manualCode, setManualCode] = useState(token || '')
+  const [state, setState] = useState<'working' | 'ok' | 'idle' | 'error'>(token ? 'working' : 'idle')
   const [error, setError] = useState<unknown>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  const verifyWithCode = useCallback(async (codeToVerify: string) => {
+    const clean = codeToVerify.trim()
+    if (!clean) return
+    setState('working')
+    setError(null)
+    setSubmitting(true)
+    try {
+      await api.post('/api/auth/verify-email', { token: clean })
+      setState('ok')
+      await refresh()
+    } catch (err: unknown) {
+      setError(err)
+      setState('error')
+    } finally {
+      setSubmitting(false)
+    }
+  }, [refresh])
 
   useEffect(() => {
-    if (!token) {
-      setState('error')
-      return
+    if (token) {
+      verifyWithCode(token)
     }
-    api
-      .post('/api/auth/verify-email', { token })
-      .then(async () => {
-        setState('ok')
-        await refresh()
-      })
-      .catch((err: unknown) => {
-        setError(err)
-        setState('error')
-      })
-  }, [token, refresh])
+  }, [token, verifyWithCode])
+
+  const handleManualSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    await verifyWithCode(manualCode)
+  }
 
   return (
     <div className="narrow">
@@ -260,14 +317,32 @@ export function VerifyPage({ token }: { token: string | null }) {
             <Button onClick={() => navigate(user ? '/' : '/login')}>{user ? 'Continue' : 'Sign in'}</Button>
           </div>
         )}
-        {state === 'error' && (
-          <div className="state state-error">
-            <div className="state-icon" aria-hidden="true">⏱️</div>
-            <h1 className="state-title">This link can’t be used</h1>
-            <p className="state-text">
-              {error instanceof ApiError && error.status === 410
-                ? 'It was already used or has expired (links last 24 hours).'
-                : 'The verification link is missing or invalid.'}
+        {state !== 'ok' && state !== 'working' && (
+          <div>
+            <h1>Enter verification code</h1>
+            <p className="muted">Enter the 6-digit verification code sent to your campus email.</p>
+            {error !== null && (
+              <Alert tone="danger">
+                {error instanceof ApiError && error.status === 410
+                  ? 'Verification code has expired or has already been used.'
+                  : 'Invalid verification code. Please check and try again.'}
+              </Alert>
+            )}
+            <form onSubmit={handleManualSubmit}>
+              <TextField
+                label="Verification code"
+                placeholder="e.g. 123456"
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+                required
+                maxLength={64}
+              />
+              <Button type="submit" busy={submitting} className="btn-block">
+                Verify Code
+              </Button>
+            </form>
+            <p className="auth-switch">
+              Need to sign in? <Link to="/login">Sign in</Link>
             </p>
           </div>
         )}

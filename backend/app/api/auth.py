@@ -29,6 +29,8 @@ from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
     RegisterRequest,
+    RegisterResponse,
+    ResendVerificationResponse,
     UpdateMeRequest,
     UserResponse,
     VerifyEmailRequest,
@@ -52,11 +54,11 @@ def _user_response(user: User) -> UserResponse:
     )
 
 
-@router.post("/auth/register", status_code=status.HTTP_201_CREATED)
+@router.post("/auth/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     req: RegisterRequest,
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
+) -> RegisterResponse:
     """AC-01: Register user with an email in ALLOWED_EMAIL_DOMAINS (exact domain match)."""
     email_clean = req.email.strip().lower()
     domain = email_clean.split("@")[-1]
@@ -118,7 +120,38 @@ async def register(
     # (never the token or the address) and registration still succeeds.
     await send_verification_email(email_clean, raw_token)
 
-    return {"message": "Account created. Verification link sent to email.", "email": email_clean}
+    return RegisterResponse(
+        message="Account created. Verification link sent to email.",
+        email=email_clean,
+        verification_url=f"/#/verify?token={raw_token}",
+    )
+
+
+@router.post("/auth/resend-verification", response_model=ResendVerificationResponse)
+async def resend_verification(
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db),
+) -> ResendVerificationResponse:
+    """AC-02: Resend email verification link for the currently logged-in user."""
+    if current_user.email_verified_at is not None:
+        return ResendVerificationResponse(message="Email is already verified.")
+
+    raw_token = generate_secure_token()
+    token_entry = EmailToken(
+        user_id=current_user.id,
+        token_hash=hash_token(raw_token),
+        purpose="verify_email",
+        expires_at=utc_now() + timedelta(hours=24),
+    )
+    db.add(token_entry)
+    await db.commit()
+
+    await send_verification_email(current_user.email, raw_token)
+
+    return ResendVerificationResponse(
+        message="Verification link generated.",
+        verification_url=f"/#/verify?token={raw_token}",
+    )
 
 
 @router.post("/auth/verify-email")

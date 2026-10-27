@@ -2298,6 +2298,37 @@
         "title": "RegisterRequest",
         "type": "object"
       },
+      "RegisterResponse": {
+        "additionalProperties": false,
+        "description": "Registration response with optional instant verification URL.",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "verification_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Url"
+          }
+        },
+        "required": [
+          "message",
+          "email"
+        ],
+        "title": "RegisterResponse",
+        "type": "object"
+      },
       "ReportDispositionRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2442,6 +2473,32 @@
           "email"
         ],
         "title": "ReporterSummary",
+        "type": "object"
+      },
+      "ResendVerificationResponse": {
+        "additionalProperties": false,
+        "description": "Resend email verification response with optional instant verification URL.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "verification_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Url"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ResendVerificationResponse",
         "type": "object"
       },
       "RetentionRunResponse": {
@@ -3371,11 +3428,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Register Api Auth Register Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RegisterResponse"
                 }
               }
             },
@@ -3393,6 +3446,56 @@
           }
         },
         "summary": "Register",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/resend-verification": {
+      "post": {
+        "description": "AC-02: Resend email verification link for the currently logged-in user.",
+        "operationId": "resend_verification_api_auth_resend_verification_post",
+        "parameters": [
+          {
+            "in": "cookie",
+            "name": "session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResendVerificationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resend Verification",
         "tags": [
           "auth"
         ]

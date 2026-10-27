@@ -31,6 +31,25 @@ class VerifyEmailRequest(BaseModel):
     token: str = Field(min_length=16, max_length=128)
 
 
+class RegisterResponse(BaseModel):
+    """Registration response with optional instant verification URL."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    message: str
+    email: str
+    verification_url: str | None = None
+
+
+class ResendVerificationResponse(BaseModel):
+    """Resend email verification response with optional instant verification URL."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    message: str
+    verification_url: str | None = None
+
+
 class UserResponse(BaseModel):
     """Public authenticated user profile (whitelisted fields only)."""
 

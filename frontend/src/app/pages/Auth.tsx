@@ -113,7 +113,7 @@ export function RegisterPage() {
   const [confirm, setConfirm] = useState('')
   const [fields, setFields] = useState<Record<string, string>>({})
   const [error, setError] = useState<unknown>(null)
-  const [done, setDone] = useState<string | null>(null)
+  const [done, setDone] = useState<{ email: string; url?: string } | null>(null)
   const [busy, setBusy] = useState(false)
 
   const submit = async (e: FormEvent) => {
@@ -127,12 +127,12 @@ export function RegisterPage() {
     setBusy(true)
     setError(null)
     try {
-      await api.post('/api/auth/register', {
+      const res = await api.post<{ email: string; verification_url?: string }>('/api/auth/register', {
         email: email.trim(),
         password,
         display_name: name.trim() || null,
       })
-      setDone(email.trim())
+      setDone({ email: email.trim(), url: res.verification_url })
     } catch (err) {
       if (err instanceof ApiError && err.code === 'email_domain_not_allowed') {
         setFields({ email: errorMessage(err) })
@@ -154,10 +154,17 @@ export function RegisterPage() {
             <div className="state-icon" aria-hidden="true">📬</div>
             <h1 className="state-title">Check your inbox</h1>
             <p className="state-text">
-              We sent a verification link to <strong>{done}</strong>. Open it within 24 hours to activate
-              reporting and claims. You can sign in meanwhile.
+              We sent a verification link to <strong>{done.email}</strong>. Open it within 24 hours to activate
+              reporting and claims.
             </p>
-            <Button onClick={() => navigate('/login')}>Go to sign in</Button>
+            {done.url && (
+              <div style={{ margin: '1rem 0' }}>
+                <Button onClick={() => navigate(done.url!.replace('/#', ''))}>
+                  Verify email now (Instant Verification)
+                </Button>
+              </div>
+            )}
+            <Button variant="ghost" onClick={() => navigate('/login')}>Go to sign in</Button>
           </div>
         </Card>
       </div>

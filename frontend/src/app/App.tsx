@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { api } from './api'
 import { AuthProvider, isAdmin, isStaff, useAuth } from './auth'
 import { Link, navigate, useRoute, type Route } from './router'
 import { Alert, Button, EmptyState, Loading, ToastHost } from './ui'
@@ -190,12 +191,39 @@ function Routes({ route }: { route: Route }) {
 }
 
 function VerifyBanner() {
-  const { user } = useAuth()
+  const { user, refresh } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
   if (!user || user.email_verified) return null
+
+  const handleVerifyNow = async () => {
+    setBusy(true)
+    setErr(null)
+    try {
+      const res = await api.post<{ verification_url?: string }>('/api/auth/resend-verification')
+      if (res.verification_url) {
+        navigate(res.verification_url.replace('/#', ''))
+        await refresh()
+      }
+    } catch {
+      setErr('Unable to generate verification link.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
-    <div className="container">
+    <div className="container" style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
       <Alert tone="warning" title="Confirm your campus email">
-        Open the verification link we emailed to {user.email} to report items and make claims.
+        <p style={{ margin: 0 }}>
+          Open the verification link we emailed to <strong>{user.email}</strong> to report items and make claims.
+        </p>
+        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <Button type="button" size="sm" busy={busy} onClick={handleVerifyNow}>
+            Verify Email Now (Instant Verification)
+          </Button>
+          {err && <span className="small text-danger">{err}</span>}
+        </div>
       </Alert>
     </div>
   )

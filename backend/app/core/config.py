@@ -76,6 +76,9 @@ class Settings(BaseSettings):
     SMTP_HOST: str = "localhost"
     SMTP_PORT: int = 1025
     SMTP_FROM: str = "no-reply@campus.edu"
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_USE_TLS: bool = False
     # Base URL of the web app, used in emailed links (verification)
     APP_BASE_URL: str = "http://localhost:8080"
 

@@ -27,6 +27,10 @@ def _send_sync(to_address: str, subject: str, body: str, message_id: str | None)
         msg["Message-ID"] = message_id  # AC-69: the same ID on every retry
     msg.set_content(body)
     with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as smtp:
+        if settings.SMTP_USE_TLS:
+            smtp.starttls()
+        if settings.SMTP_USER and settings.SMTP_PASSWORD:
+            smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         smtp.send_message(msg)
 
 

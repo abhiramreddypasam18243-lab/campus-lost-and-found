@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { api } from './api'
+import { api, ApiError } from './api'
 import { AuthProvider, isAdmin, isStaff, useAuth } from './auth'
 import { Link, navigate, useRoute, type Route } from './router'
 import { Alert, Button, EmptyState, Loading, ToastHost } from './ui'
@@ -223,9 +223,13 @@ function VerifyBanner() {
     setStatusMsg(null)
     try {
       await api.post('/api/auth/resend-verification')
-      setStatusMsg({ tone: 'info', text: 'A new 6-digit verification code has been emailed to your Gmail.' })
-    } catch {
-      setStatusMsg({ tone: 'danger', text: 'Unable to send verification email. Please check your SMTP settings.' })
+      setStatusMsg({ tone: 'info', text: 'A new 6-digit verification code has been sent to your email.' })
+    } catch (err: unknown) {
+      const msg =
+        err instanceof ApiError && err.message
+          ? err.message
+          : 'Unable to send verification email. Please check your SMTP settings in Render.'
+      setStatusMsg({ tone: 'danger', text: msg })
     } finally {
       setResending(false)
     }

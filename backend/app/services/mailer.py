@@ -26,12 +26,24 @@ def _send_sync(to_address: str, subject: str, body: str, message_id: str | None)
     if message_id:
         msg["Message-ID"] = message_id  # AC-69: the same ID on every retry
     msg.set_content(body)
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as smtp:
-        if settings.SMTP_USE_TLS:
-            smtp.starttls()
-        if settings.SMTP_USER and settings.SMTP_PASSWORD:
-            smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        smtp.send_message(msg)
+
+    port = int(settings.SMTP_PORT)
+    use_tls = str(settings.SMTP_USE_TLS).lower() in ("true", "1", "yes")
+
+    if port == 465:
+        with smtplib.SMTP_SSL(settings.SMTP_HOST, port, timeout=15) as smtp:
+            if settings.SMTP_USER and settings.SMTP_PASSWORD:
+                smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            smtp.send_message(msg)
+    else:
+        with smtplib.SMTP(settings.SMTP_HOST, port, timeout=15) as smtp:
+            smtp.ehlo()
+            if use_tls:
+                smtp.starttls()
+                smtp.ehlo()
+            if settings.SMTP_USER and settings.SMTP_PASSWORD:
+                smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            smtp.send_message(msg)
 
 
 async def send_email(
@@ -43,8 +55,8 @@ async def send_email(
 
 async def send_verification_email(
     to_address: str, raw_token: str, raw_code: str | None = None
-) -> bool:
-    """AC-02: email the single-use verification code and link. Returns False if delivery failed."""
+) -> tuple[bool, str | None]:
+    """AC-02: email the single-use verification code and link. Returns (success, error_reason)."""
     settings = get_settings()
     link = f"{settings.APP_BASE_URL.rstrip('/')}/#/verify?token={quote(raw_token)}"
     code_block = (
@@ -62,6 +74,7 @@ async def send_verification_email(
     try:
         await send_email(to_address, subject, body)
     except Exception as exc:
-        logger.warning("verification email not sent: %s", type(exc).__name__)
-        return False
-    return True
+        err_msg = f"{type(exc).__name__}: {exc}"
+        logger.warning("verification email not sent: %s", err_msg)
+        return False, err_msg
+    return True, None

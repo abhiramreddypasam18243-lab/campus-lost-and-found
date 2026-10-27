@@ -164,7 +164,15 @@ async def resend_verification(
     db.add(code_entry)
     await db.commit()
 
-    await send_verification_email(current_user.email, raw_token, raw_code)
+    sent, err_msg = await send_verification_email(current_user.email, raw_token, raw_code)
+    if not sent:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "code": "email_delivery_failed",
+                "message": f"Could not deliver email ({err_msg}). Please check SMTP settings in Render.",
+            },
+        )
 
     return ResendVerificationResponse(
         message="Verification code sent to your email.",

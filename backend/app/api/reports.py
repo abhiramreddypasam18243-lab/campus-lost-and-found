@@ -77,6 +77,7 @@ def _to_report_response(report: ItemReport, viewer: User) -> ReportResponse:
         description=report.description,
         category=report.category,
         location_id=report.location_id,
+        location_text=report.location_text,
         reporter_id=report.reporter_id,
         window_start=report.window_start,
         window_end=report.window_end,
@@ -86,6 +87,28 @@ def _to_report_response(report: ItemReport, viewer: User) -> ReportResponse:
         images=images,
         created_at=report.created_at,
     )
+
+
+async def _check_location(
+    db: AsyncSession, location_id: uuid.UUID | None, location_text: str | None
+) -> None:
+    """D-22: a report needs a campus-tree node, a typed place, or both; a given node must exist."""
+    if location_id is None and location_text is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=[
+                {
+                    "type": "missing",
+                    "loc": ["body", "location"],
+                    "msg": "Choose a campus place or type where it was.",
+                    "input": None,
+                }
+            ],
+        )
+    if location_id is not None:
+        loc_res = await db.execute(select(CampusLocation).where(CampusLocation.id == location_id))
+        if loc_res.scalar_one_or_none() is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="location_not_found")
 
 
 @router.post(
@@ -100,7 +123,11 @@ async def create_lost_report(
     db: AsyncSession = Depends(get_db),
 ) -> ReportResponse:
     # 1. PII Scan (AC-28, AC-29)
-    for field_name, field_val in (("title", payload.title), ("description", payload.description)):
+    for field_name, field_val in (
+        ("title", payload.title),
+        ("description", payload.description),
+        ("location_text", payload.location_text or ""),
+    ):
         detected_kind = scan_pii(field_val)
         if detected_kind is not None:
             raise HTTPException(
@@ -108,12 +135,8 @@ async def create_lost_report(
                 detail={"code": "pii_detected", "kind": detected_kind, "field": field_name},
             )
 
-    # 2. Location verification
-    loc_res = await db.execute(
-        select(CampusLocation).where(CampusLocation.id == payload.location_id)
-    )
-    if loc_res.scalar_one_or_none() is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="location_not_found")
+    # 2. Location: a campus-tree node, a typed place, or both (D-22)
+    await _check_location(db, payload.location_id, payload.location_text)
 
     # 3. Time Window calculation (AC-23)
     start_utc, end_utc = compute_time_window(
@@ -132,6 +155,7 @@ async def create_lost_report(
         description=payload.description.strip(),
         category=payload.category,
         location_id=payload.location_id,
+        location_text=payload.location_text,
         reporter_id=current_user.id,
         window_start=start_utc,
         window_end=end_utc,
@@ -146,7 +170,10 @@ async def create_lost_report(
         action="create_lost_report",
         entity_type="item_report",
         entity_id=report_id,
-        summary={"category": report.category, "location_id": str(report.location_id)},
+        summary={
+            "category": report.category,
+            "location_id": str(report.location_id) if report.location_id else None,
+        },
     )
     await db.commit()
     await db.refresh(report)
@@ -166,7 +193,11 @@ async def create_found_report(
     db: AsyncSession = Depends(get_db),
 ) -> ReportResponse:
     # 1. PII Scan on public fields (AC-28, AC-29)
-    for field_name, field_val in (("title", payload.title), ("description", payload.description)):
+    for field_name, field_val in (
+        ("title", payload.title),
+        ("description", payload.description),
+        ("location_text", payload.location_text or ""),
+    ):
         detected_kind = scan_pii(field_val)
         if detected_kind is not None:
             raise HTTPException(
@@ -174,12 +205,8 @@ async def create_found_report(
                 detail={"code": "pii_detected", "kind": detected_kind, "field": field_name},
             )
 
-    # 2. Location verification
-    loc_res = await db.execute(
-        select(CampusLocation).where(CampusLocation.id == payload.location_id)
-    )
-    if loc_res.scalar_one_or_none() is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="location_not_found")
+    # 2. Location: a campus-tree node, a typed place, or both (D-22)
+    await _check_location(db, payload.location_id, payload.location_text)
 
     # 3. Time Window calculation (AC-23)
     start_utc, end_utc = compute_time_window(
@@ -198,6 +225,7 @@ async def create_found_report(
         description=payload.description.strip(),
         category=payload.category,
         location_id=payload.location_id,
+        location_text=payload.location_text,
         reporter_id=current_user.id,
         window_start=start_utc,
         window_end=end_utc,
@@ -214,7 +242,10 @@ async def create_found_report(
         action="create_found_report",
         entity_type="item_report",
         entity_id=report_id,
-        summary={"category": report.category, "location_id": str(report.location_id)},
+        summary={
+            "category": report.category,
+            "location_id": str(report.location_id) if report.location_id else None,
+        },
     )
     await db.commit()
     await db.refresh(report)
@@ -284,8 +315,10 @@ async def get_report(
 
     # AC-42: Staff and owners see full details
     if is_owner or is_staff:
-        loc_stmt = select(CampusLocation).where(CampusLocation.id == report.location_id)
-        loc = (await db.execute(loc_stmt)).scalar_one_or_none()
+        loc = None
+        if report.location_id is not None:
+            loc_stmt = select(CampusLocation).where(CampusLocation.id == report.location_id)
+            loc = (await db.execute(loc_stmt)).scalar_one_or_none()
         location_detail = (
             LocationDetail(
                 id=loc.id,
@@ -332,6 +365,7 @@ async def get_report(
             description=report.description,
             category=report.category,
             location_id=report.location_id,
+            location_text=report.location_text,
             location=location_detail,
             reporter_id=report.reporter_id,
             reporter=reporter_summary,

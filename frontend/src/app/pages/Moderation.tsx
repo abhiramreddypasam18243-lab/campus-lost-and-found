@@ -11,7 +11,7 @@ import {
 } from '../api'
 import { useAuth } from '../auth'
 import { categoryLabel, errorMessage, formatDateTime, timeAgo } from '../format'
-import { indexLocations, pathLabel, useLocations } from '../locations'
+import { indexLocations, placeLabel, useLocations } from '../locations'
 import { Link, navigate } from '../router'
 import {
   Alert,
@@ -149,7 +149,7 @@ function StaffReportPanel({ r }: { r: StaffReport }) {
       )}
       <KeyValue
         items={[
-          ['Exact location', index ? pathLabel(index, r.location_id) : '…'],
+          ['Exact location', index ? placeLabel(index, r.location_id, r.location_text) : '…'],
           ['When', `${formatDateTime(r.window_start)} – ${formatDateTime(r.window_end)}`],
           ['Reporter', r.reporter ? `${r.reporter.display_name ?? '—'} (${r.reporter.email})` : '—'],
           ['Reported', formatDateTime(r.created_at)],

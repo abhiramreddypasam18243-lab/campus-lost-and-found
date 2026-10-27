@@ -101,7 +101,8 @@ async def export_user_data(db: AsyncSession, user: User) -> dict[str, Any]:
             "verification_prompts": r.verification_prompts,
             "window_start": r.window_start.isoformat() if r.window_start else None,
             "window_end": r.window_end.isoformat() if r.window_end else None,
-            "location_id": str(r.location_id),
+            "location_id": str(r.location_id) if r.location_id else None,
+            "location_text": r.location_text,
             "disposition": r.disposition,
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }

@@ -748,7 +748,11 @@ input[type='time'].input {
   -webkit-appearance: none;
   appearance: none;
 }
-.input:focus-visible {
+/* A date or time input's last Tab stop is its calendar button, inside the input; the input then
+   matches neither :focus nor :focus-visible, only :focus-within. */
+.input:focus-visible,
+input[type='date'].input:focus-within,
+input[type='time'].input:focus-within {
   outline: 3px solid color-mix(in srgb, var(--focus) 45%, transparent);
   outline-offset: 0;
   border-color: var(--focus);

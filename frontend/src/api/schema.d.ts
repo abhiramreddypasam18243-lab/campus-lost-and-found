@@ -250,6 +250,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/resend-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend Verification
+         * @description AC-02: Resend email verification code for the currently logged-in user.
+         */
+        post: operations["resend_verification_api_auth_resend_verification_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/verify-email": {
         parameters: {
             query?: never;
@@ -261,7 +281,7 @@ export interface paths {
         put?: never;
         /**
          * Verify Email
-         * @description AC-02: Verify email using single-use token.
+         * @description AC-02: Verify email using single-use 6-digit code or link token.
          */
         post: operations["verify_email_api_auth_verify_email_post"];
         delete?: never;
@@ -1360,11 +1380,10 @@ export interface components {
             description: string;
             /** Exact Time */
             exact_time?: string | null;
-            /**
-             * Location Id
-             * Format: uuid
-             */
-            location_id: string;
+            /** Location Id */
+            location_id?: string | null;
+            /** Location Text */
+            location_text?: string | null;
             /** Private Details */
             private_details?: string | null;
             /**
@@ -1390,11 +1409,10 @@ export interface components {
             description: string;
             /** Exact Time */
             exact_time?: string | null;
-            /**
-             * Location Id
-             * Format: uuid
-             */
-            location_id: string;
+            /** Location Id */
+            location_id?: string | null;
+            /** Location Text */
+            location_text?: string | null;
             /**
              * Time Precision
              * @enum {string}
@@ -1463,11 +1481,10 @@ export interface components {
              */
             images: components["schemas"]["ImageResponse"][];
             location?: components["schemas"]["LocationDetail"] | null;
-            /**
-             * Location Id
-             * Format: uuid
-             */
-            location_id: string;
+            /** Location Id */
+            location_id: string | null;
+            /** Location Text */
+            location_text?: string | null;
             /** Private Details */
             private_details?: string | null;
             reporter?: components["schemas"]["ReporterSummary"] | null;
@@ -2013,6 +2030,16 @@ export interface components {
             /** Password */
             password: string;
         };
+        /**
+         * RegisterResponse
+         * @description Registration response.
+         */
+        RegisterResponse: {
+            /** Email */
+            email: string;
+            /** Message */
+            message: string;
+        };
         /** ReportDispositionRequest */
         ReportDispositionRequest: {
             /** Disposition */
@@ -2036,11 +2063,10 @@ export interface components {
             id: string;
             /** Images */
             images?: components["schemas"]["ImageResponse"][];
-            /**
-             * Location Id
-             * Format: uuid
-             */
-            location_id: string;
+            /** Location Id */
+            location_id: string | null;
+            /** Location Text */
+            location_text?: string | null;
             /** Private Details */
             private_details?: string | null;
             /**
@@ -2083,6 +2109,14 @@ export interface components {
              * Format: uuid
              */
             id: string;
+        };
+        /**
+         * ResendVerificationResponse
+         * @description Resend email verification response.
+         */
+        ResendVerificationResponse: {
+            /** Message */
+            message: string;
         };
         /** RetentionRunResponse */
         RetentionRunResponse: {
@@ -2152,11 +2186,13 @@ export interface components {
         };
         /**
          * VerifyEmailRequest
-         * @description Email verification schema.
+         * @description Email verification schema by token or 6-digit numeric code.
          */
         VerifyEmailRequest: {
+            /** Code */
+            code?: string | null;
             /** Token */
-            token: string;
+            token?: string | null;
         };
     };
     responses: never;
@@ -2559,9 +2595,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["RegisterResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_verification_api_auth_resend_verification_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                session_id?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResendVerificationResponse"];
                 };
             };
             /** @description Validation Error */

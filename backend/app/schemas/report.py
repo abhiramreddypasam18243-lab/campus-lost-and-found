@@ -7,6 +7,14 @@ from app.domain.categories import is_valid_category
 from app.domain.time import TimePrecision
 
 
+def _clean_location_text(v: str | None) -> str | None:
+    """D-22: trim a typed place; blank counts as not given."""
+    if v is None:
+        return None
+    v = " ".join(v.split())
+    return v or None
+
+
 class ImageResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -25,7 +33,8 @@ class CreateLostReportRequest(BaseModel):
     title: str = Field(..., min_length=3, max_length=120)
     description: str = Field(..., min_length=10, max_length=2000)
     category: str
-    location_id: uuid.UUID
+    location_id: uuid.UUID | None = None
+    location_text: str | None = Field(None, max_length=200)
     date: date
     time_precision: TimePrecision
     exact_time: time | None = None
@@ -37,6 +46,11 @@ class CreateLostReportRequest(BaseModel):
             raise ValueError(f"Invalid category: {v}")
         return v
 
+    @field_validator("location_text")
+    @classmethod
+    def clean_location_text(cls, v: str | None) -> str | None:
+        return _clean_location_text(v)
+
 
 class CreateFoundReportRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -44,7 +58,8 @@ class CreateFoundReportRequest(BaseModel):
     title: str = Field(..., min_length=3, max_length=120)
     description: str = Field(..., min_length=10, max_length=2000)
     category: str
-    location_id: uuid.UUID
+    location_id: uuid.UUID | None = None
+    location_text: str | None = Field(None, max_length=200)
     date: date
     time_precision: TimePrecision
     exact_time: time | None = None
@@ -57,6 +72,11 @@ class CreateFoundReportRequest(BaseModel):
         if not is_valid_category(v):
             raise ValueError(f"Invalid category: {v}")
         return v
+
+    @field_validator("location_text")
+    @classmethod
+    def clean_location_text(cls, v: str | None) -> str | None:
+        return _clean_location_text(v)
 
     @field_validator("verification_prompts")
     @classmethod
@@ -78,7 +98,8 @@ class ReportResponse(BaseModel):
     title: str
     description: str
     category: str
-    location_id: uuid.UUID
+    location_id: uuid.UUID | None
+    location_text: str | None = None
     reporter_id: uuid.UUID
     window_start: datetime
     window_end: datetime

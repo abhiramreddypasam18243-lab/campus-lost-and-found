@@ -83,14 +83,8 @@ with sync_playwright() as p:
     tab_to(bob, "Description")
     bob.keyboard.type("Grey folding umbrella with a wooden handle, left by the entrance.")
     choose(bob, "Category", "Other")
-    bob.locator(".cascade select").first.wait_for()
-    # The first location select has no visible label (it is labelled for screen readers).
-    for _ in range(40):
-        bob.keyboard.press("Tab")
-        is_loc = bob.evaluate("() => document.activeElement.closest('.cascade') !== null")
-        if is_loc:
-            break
-    bob.keyboard.press("ArrowDown")
+    tab_to(bob, "Where did you find it?")
+    bob.keyboard.type("Library entrance, by the umbrella stand")
     tab_to(bob, "Private details")
     bob.keyboard.type("Initials RK carved into the handle")
     tab_to(bob, "Question 1")

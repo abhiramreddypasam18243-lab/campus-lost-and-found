@@ -1,7 +1,17 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -32,12 +42,15 @@ class ItemReport(Base):
     )
     time_precision: Mapped[str] = mapped_column(String(20), nullable=False)
 
-    location_id: Mapped[uuid.UUID] = mapped_column(
+    # A campus-tree node, a typed place, or both (D-22). The typed place is private, like
+    # private_details: only the reporter and staff ever see it.
+    location_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("campus_locations.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
+    location_text: Mapped[str | None] = mapped_column(String(200), nullable=True)
     reporter_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -68,6 +81,9 @@ class ItemReport(Base):
     )
 
     __table_args__ = (
+        CheckConstraint(
+            "location_id IS NOT NULL OR location_text IS NOT NULL", name="ck_item_reports_has_location"
+        ),
         Index("ix_item_reports_type_status", "type", "status"),
         Index("ix_item_reports_category", "category"),
         Index(

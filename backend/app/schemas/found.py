@@ -93,7 +93,8 @@ class FullStaffReportResponse(BaseModel):
     title: str
     description: str
     category: str
-    location_id: uuid.UUID
+    location_id: uuid.UUID | None
+    location_text: str | None = None
     location: LocationDetail | None = None
     reporter_id: uuid.UUID
     reporter: ReporterSummary | None = None

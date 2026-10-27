@@ -25,7 +25,7 @@ Build a secure, campus-aware lost-and-found platform with explainable multimodal
 | Input | Details |
 | --- | --- |
 | Accounts | Campus email, password, display name (optional) |
-| Reports | Lost or found: title, description, category, time (with precision), campus location (any level), up to 3 photos, optional private details and verification prompts (found reports) |
+| Reports | Lost or found: title, description, category, time (with precision), campus location (any level) and/or a typed place (D-22), up to 3 photos, optional private details and verification prompts (found reports) |
 | Claims | Evidence text, answers to verification prompts, up to 3 private evidence photos |
 | Moderator actions | Approve or remove reports, decide claims, issue and verify handover codes |
 | Campus data | A location tree and building adjacency, maintained by admins |
@@ -291,7 +291,7 @@ All primary keys are UUIDs, with `created_at` and `updated_at`, foreign keys and
 | `sessions` | `user_id`, `token_hash`, `csrf_token_hash`, `expires_at`, `revoked_at` |
 | `campus_locations` | `parent_id`, `kind` (`campus`, `building`, `floor`, `room`, `area`), `name`, optional rounded `lat` and `lng` |
 | `location_adjacency` | `building_a`, `building_b` (stored in both directions or normalised) |
-| `item_reports` | `type` (`lost`, `found`), `status`, `title`, `description`, `category`, `private_details`, `verification_prompts` (JSONB), `window_start`, `window_end`, `time_precision`, `location_id`, `reporter_id`, `disposition`, `closed_at`, `reviewed_by` |
+| `item_reports` | `type` (`lost`, `found`), `status`, `title`, `description`, `category`, `private_details`, `verification_prompts` (JSONB), `window_start`, `window_end`, `time_precision`, `location_id` (nullable), `location_text` (nullable, at most 200 characters, private; at least one of the two is set, D-22), `reporter_id`, `disposition`, `closed_at`, `reviewed_by` |
 | `item_images` | `owner_type` (`report`, `claim`), `owner_id`, `storage_key`, `sha256`, `dhash`, `width`, `height`, `is_public`, `moderation_status`, `deleted_at` |
 | `text_embeddings`, `image_embeddings` | `entity_id`, `model_name`, `model_version`, `dimension`, `vector` (pgvector) |
 | `match_candidates` | `lost_id`, `found_id`, per-signal scores, `combined`, `bin`, `weights_version`, `model_versions`, `explanation` (JSONB), `status` (`suggested`, `dismissed`, `stale`) |
@@ -487,7 +487,7 @@ Clocks in tests are injected, so results are deterministic.
 - [ ] **AC-20** (FR-02) A report can use a location at any level (building-level is allowed), no GPS is ever required, and optional coordinates are stored rounded to 3 decimal places.
 
 ### Reports, lifecycle and uploads
-- [ ] **AC-21** (FR-03) A lost report requires a title (3 to 120 characters), a description (10 to 2,000), a category, a lost-time window and a location; validation errors list each failing field; saving returns without waiting for embeddings.
+- [ ] **AC-21** (FR-03) A lost report requires a title (3 to 120 characters), a description (10 to 2,000), a category, a lost-time window and a location (a campus place, a typed place, or both, D-22); validation errors list each failing field; saving returns without waiting for embeddings.
 - [ ] **AC-22** (FR-04) A found report requires the same fields plus a found time; it may add private details (up to 1,000 characters) and up to 3 verification prompts (each up to 200 characters). With moderation on (default), it starts as `pending_review` and is not listed until approved.
 - [ ] **AC-23** (5.2) For the timezone `Asia/Kolkata`, a `day` precision on 2026-10-15 gives the window 2026-10-14T18:30:00Z to 2026-10-15T18:29:59.999Z; `morning` is 06:00 to 12:00 local, `afternoon` 12:00 to 17:00, `evening` 17:00 to 22:00, `night` 22:00 to 06:00 (crossing midnight); `exact` is a zero-length window.
 - [ ] **AC-24** (FR-03) A category outside the fixed list returns 422.
@@ -737,6 +737,7 @@ The benchmark generator, the metrics and the statistics in step 12 depend only o
 | D-19 | 2026-10-21 | A report's CLIP text vector is stored in `image_embeddings` (entity = report id, model name `clip-ViT-B-32:text`) and drives the text-to-image signal | A new table; computing CLIP text vectors at match time | Same 512-d space as photo vectors, no schema change, matching stays a pure vector comparison |
 | D-20 | 2026-10-21 | A signed-in user starting a claim sees the finder's verification questions through a claim-form endpoint; listings and detail views never include them | Keep prompts hidden (AC-75 cannot be satisfied); show prompts publicly | Resolves the P1 / AC-75 conflict: the answers are the secret, not the questions (pending owner confirmation) |
 | D-21 | 2026-10-21 | Credentials only over TLS or from this machine; forwarded headers trusted only from `TRUSTED_PROXIES`; published ports bound to 127.0.0.1; LAN uses HTTPS on 8443 | Trust any 172.* peer and all proxied requests in development | The old rule let LAN clients log in over plain HTTP and let containers forge forwarded headers (SEC7) |
+| D-22 | 2026-10-28 | "Where?" is free text with campus suggestions. Text that starts with a campus place links that place (`location_id`); the words are kept in `location_text`, which only the reporter and staff see and which is PII-scanned. A report with only typed text gets a `null` location score (6.3) and no building in public views | Fixed pickers only; geocoding or parsing free text into the tree | Owner request: people describe spots the tree does not have ("bench outside the canteen"). Matching keeps working whenever a place is linked, and P1 holds because the typed text is private |
 
 ## 21. Open Questions
 

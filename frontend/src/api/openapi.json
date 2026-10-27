@@ -708,9 +708,28 @@
             "title": "Exact Time"
           },
           "location_id": {
-            "format": "uuid",
-            "title": "Location Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
+          "location_text": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Text"
           },
           "private_details": {
             "anyOf": [
@@ -754,7 +773,6 @@
           "title",
           "description",
           "category",
-          "location_id",
           "date",
           "time_precision"
         ],
@@ -792,9 +810,28 @@
             "title": "Exact Time"
           },
           "location_id": {
-            "format": "uuid",
-            "title": "Location Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
+          "location_text": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Text"
           },
           "time_precision": {
             "enum": [
@@ -819,7 +856,6 @@
           "title",
           "description",
           "category",
-          "location_id",
           "date",
           "time_precision"
         ],
@@ -991,9 +1027,27 @@
             ]
           },
           "location_id": {
-            "format": "uuid",
-            "title": "Location Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
+          "location_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Text"
           },
           "private_details": {
             "anyOf": [
@@ -2361,9 +2415,27 @@
             "type": "array"
           },
           "location_id": {
-            "format": "uuid",
-            "title": "Location Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
+          "location_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Text"
           },
           "private_details": {
             "anyOf": [

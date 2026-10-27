@@ -12,7 +12,7 @@ import {
 } from '../api'
 import { useAuth } from '../auth'
 import { CATEGORIES, binTone, categoryLabel, errorMessage, formatDate, formatDateTime, PRECISIONS, todayISO } from '../format'
-import { indexLocations, LocationPicker, pathLabel, useLocations } from '../locations'
+import { indexLocations, PlaceField, placeLabel, useLocations, type PlaceValue } from '../locations'
 import { Link, navigate } from '../router'
 import {
   Alert,
@@ -103,13 +103,19 @@ function PhotoInput({ photos, onChange }: { photos: PhotoDraft[]; onChange: (p: 
   )
 }
 
+/** What to store as typed (D-22): nothing when the text is just the linked place's own label. */
+function placeText(place: PlaceValue): string | null {
+  const text = place.text.trim()
+  return text && !place.linkedLabelOnly ? text : null
+}
+
 export function ReportFormPage({ initialType }: { initialType: 'lost' | 'found' }) {
   const { user } = useAuth()
   const [type, setType] = useState<'lost' | 'found'>(initialType)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
-  const [locationId, setLocationId] = useState('')
+  const [place, setPlace] = useState<PlaceValue>({ text: '', locationId: '' })
   const [date, setDate] = useState(todayISO())
   const [precision, setPrecision] = useState<TimePrecision>('day')
   const [exactTime, setExactTime] = useState('')
@@ -128,7 +134,8 @@ export function ReportFormPage({ initialType }: { initialType: 'lost' | 'found' 
     if (title.trim().length < 3 || title.trim().length > 120) f.title = 'Use 3 to 120 characters.'
     if (description.trim().length < 10 || description.trim().length > 2000) f.description = 'Use 10 to 2,000 characters.'
     if (!category) f.category = 'Choose a category.'
-    if (!locationId) f.location_id = 'Choose where it was, at least the building.'
+    if (!place.locationId && !place.text.trim()) f.location = 'Type where it was, or pick a campus place.'
+    if (place.text.length > 200) f.location = 'At most 200 characters.'
     if (!date) f.date = 'Choose the date.'
     if (date > todayISO()) f.date = 'The date cannot be in the future.'
     if (precision === 'exact' && !exactTime) f.exact_time = 'Enter the time, or pick a broader period.'
@@ -155,7 +162,8 @@ export function ReportFormPage({ initialType }: { initialType: 'lost' | 'found' 
         title: title.trim(),
         description: description.trim(),
         category,
-        location_id: locationId,
+        location_id: place.locationId || null,
+        location_text: placeText(place),
         date,
         time_precision: precision,
         exact_time: precision === 'exact' ? exactTime : null,
@@ -298,11 +306,11 @@ export function ReportFormPage({ initialType }: { initialType: 'lost' | 'found' 
               />
             )}
           </div>
-          <LocationPicker
+          <PlaceField
             label={type === 'lost' ? 'Where did you lose it?' : 'Where did you find it?'}
-            value={locationId}
-            onChange={setLocationId}
-            error={fields.location_id}
+            value={place}
+            onChange={setPlace}
+            error={fields.location}
           />
 
           {type === 'found' && (
@@ -571,7 +579,7 @@ export function MyReportDetailPage({ id }: { id: string }) {
               <KeyValue
                 items={[
                   ['Category', categoryLabel(r.category)],
-                  ['Where', index ? pathLabel(index, r.location_id) : '…'],
+                  ['Where', index ? placeLabel(index, r.location_id, r.location_text) : '…'],
                   ['When', `${formatDateTime(r.window_start)} – ${formatDateTime(r.window_end)}`],
                   ['Reported', formatDate(r.created_at)],
                 ]}

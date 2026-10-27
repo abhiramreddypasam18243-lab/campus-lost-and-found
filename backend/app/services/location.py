@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 from typing import Any, cast
 
 from sqlalchemy import text
@@ -23,12 +23,15 @@ async def get_descendant_location_ids(db: AsyncSession, root_id: uuid.UUID) -> l
 
 
 async def resolve_building_for_location(
-    db: AsyncSession, location_id: uuid.UUID
+    db: AsyncSession, location_id: uuid.UUID | None
 ) -> tuple[uuid.UUID | None, str | None]:
     """Walk up the ancestor tree to find the nearest ancestor (or self) where kind == 'building'.
 
-    Returns (building_id, building_name) or (None, None).
+    Returns (building_id, building_name) or (None, None), also for a report that only has a
+    typed place (D-22); that text is private and never used here.
     """
+    if location_id is None:
+        return None, None
     query = text(
         """
         WITH RECURSIVE ancestors AS (
@@ -54,14 +57,14 @@ async def resolve_building_for_location(
 
 
 async def resolve_buildings_batch(
-    db: AsyncSession, location_ids: list[uuid.UUID]
-) -> dict[uuid.UUID, tuple[uuid.UUID | None, str | None]]:
-    """Batch resolve building-level location for multiple locations."""
-    if not location_ids:
+    db: AsyncSession, location_ids: list[uuid.UUID | None]
+) -> dict[uuid.UUID | None, tuple[uuid.UUID | None, str | None]]:
+    """Batch resolve building-level location for multiple locations (None means no building)."""
+    unique_ids = list({i for i in location_ids if i is not None})
+    if not unique_ids:
         return {}
 
-    unique_ids = list(set(location_ids))
-    mapping: dict[uuid.UUID, tuple[uuid.UUID | None, str | None]] = {}
+    mapping: dict[uuid.UUID | None, tuple[uuid.UUID | None, str | None]] = {}
     for loc_id in unique_ids:
         b_id, b_name = await resolve_building_for_location(db, loc_id)
         mapping[loc_id] = (b_id, b_name)

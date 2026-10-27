@@ -20,11 +20,19 @@ from app.core.config import get_settings
 logger = logging.getLogger("mailer")
 
 
+def _resolve_resend_from() -> str:
+    settings = get_settings()
+    custom = settings.RESEND_FROM
+    if custom and "@" in custom:
+        domain = custom.split("@")[-1].strip("> \t\r\n").lower()
+        if domain not in ("gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com"):
+            return custom
+    return "Campus Lost and Found <onboarding@resend.dev>"
+
+
 async def _send_resend(to_address: str, subject: str, body: str) -> None:
     settings = get_settings()
-    from_addr = settings.SMTP_FROM
-    if not ("@" in from_addr and not from_addr.endswith("campus.edu")):
-        from_addr = "Campus Lost and Found <onboarding@resend.dev>"
+    from_addr = _resolve_resend_from()
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.post(
             "https://api.resend.com/emails",
@@ -40,14 +48,38 @@ async def _send_resend(to_address: str, subject: str, body: str) -> None:
             },
         )
         if resp.status_code >= 400:
-            raise RuntimeError(f"Resend API error ({resp.status_code}): {resp.text}")
+            err_text = resp.text
+            try:
+                data = resp.json()
+                msg = data.get("message", err_text)
+            except Exception:
+                msg = err_text
+
+            msg_lower = msg.lower()
+            if "not verified" in msg_lower and "domain" in msg_lower:
+                raise RuntimeError(
+                    f"Resend domain error: {msg}. "
+                    "Resend free tier requires sending from 'onboarding@resend.dev' unless a custom domain is verified on https://resend.com/domains."
+                )
+            if "only send testing emails" in msg_lower or "testing emails to your own" in msg_lower:
+                raise RuntimeError(
+                    f"Resend sandbox limitation: {msg}. "
+                    "Resend's free test domain (onboarding@resend.dev) only delivers to the email address used to create your Resend account. "
+                    "Please register on this site with that email address, or add a custom domain on https://resend.com/domains, or use Brevo (BREVO_API_KEY)."
+                )
+            raise RuntimeError(f"Resend API error ({resp.status_code}): {msg}")
 
 
 async def _send_brevo(to_address: str, subject: str, body: str) -> None:
     settings = get_settings()
-    from_addr = settings.SMTP_FROM
-    if not ("@" in from_addr and not from_addr.endswith("campus.edu")):
-        from_addr = "verify@campuslostandfound.com"
+    raw_from = settings.BREVO_FROM or settings.SMTP_FROM or "verify@campuslostandfound.com"
+    sender_name = "Campus Lost and Found"
+    sender_email = raw_from.strip()
+    if "<" in raw_from and ">" in raw_from:
+        parts = raw_from.split("<")
+        sender_name = parts[0].strip() or sender_name
+        sender_email = parts[1].split(">")[0].strip()
+
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.post(
             "https://api.brevo.com/v3/smtp/email",
@@ -56,14 +88,19 @@ async def _send_brevo(to_address: str, subject: str, body: str) -> None:
                 "Content-Type": "application/json",
             },
             json={
-                "sender": {"email": from_addr, "name": "Campus Lost and Found"},
+                "sender": {"email": sender_email, "name": sender_name},
                 "to": [{"email": to_address}],
                 "subject": subject,
                 "textContent": body,
             },
         )
         if resp.status_code >= 400:
-            raise RuntimeError(f"Brevo API error ({resp.status_code}): {resp.text}")
+            try:
+                data = resp.json()
+                msg = data.get("message", resp.text)
+            except Exception:
+                msg = resp.text
+            raise RuntimeError(f"Brevo API error ({resp.status_code}): {msg}")
 
 
 def _send_sync(to_address: str, subject: str, body: str, message_id: str | None) -> None:

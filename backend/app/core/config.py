@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Campus Domain Whitelist (parsed from comma-separated string)
     ALLOWED_EMAIL_DOMAINS_RAW: str = Field(
-        default="campus.edu,student.campus.edu,iisc.ac.in",
+        default="campus.edu,student.campus.edu,iisc.ac.in,gmail.com",
         validation_alias="ALLOWED_EMAIL_DOMAINS",
     )
 
@@ -80,7 +80,9 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     SMTP_USE_TLS: bool = False
     RESEND_API_KEY: str | None = None
+    RESEND_FROM: str | None = None
     BREVO_API_KEY: str | None = None
+    BREVO_FROM: str | None = None
     # Base URL of the web app, used in emailed links (verification)
     APP_BASE_URL: str = "http://localhost:8080"
 

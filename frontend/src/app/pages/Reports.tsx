@@ -377,7 +377,7 @@ export function MyReportsPage() {
         state={state}
         isEmpty={(d) => d.length === 0}
         empty={
-          <EmptyState icon="📝" title="You haven’t reported anything yet" action={<Button onClick={() => navigate('/report/new?type=lost')}>Report an item</Button>}>
+          <EmptyState icon="note" title="You haven’t reported anything yet" action={<Button onClick={() => navigate('/report/new?type=lost')}>Report an item</Button>}>
             Lost reports get match suggestions as found items come in.
           </EmptyState>
         }
@@ -500,7 +500,7 @@ function MatchesPanel({ lostId }: { lostId: string }) {
         label="Finding matches"
         isEmpty={(d) => d.matches.length === 0}
         empty={
-          <EmptyState icon="⏳" title="No suggestions yet">
+          <EmptyState icon="clock" title="No suggestions yet">
             Matching runs in the background a few seconds after each new report. New found items are checked
             against your report automatically — come back later or browse the listing.
           </EmptyState>

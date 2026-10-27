@@ -85,7 +85,7 @@ export function QueuePage() {
           const list = groups[tab]
           if (list.length === 0) {
             return (
-              <EmptyState icon="✅" title="Nothing waiting here">
+              <EmptyState icon="check" title="Nothing waiting here">
                 New {tab === 'claims' ? 'claims' : tab === 'reports' ? 'found reports' : 'duplicate-photo flags'} will
                 appear automatically.
               </EmptyState>
@@ -525,7 +525,7 @@ export function DeskPage() {
             state={list}
             label="Loading handovers"
             isEmpty={(d) => d.length === 0}
-            empty={<EmptyState icon="🗃️" title="No items waiting for collection" />}
+            empty={<EmptyState icon="inbox" title="No items waiting for collection" />}
           >
             {(items) => (
               <div className="list" role="list">
@@ -567,7 +567,7 @@ export function DeskPage() {
               }}
             />
           ) : (
-            <EmptyState icon="👈" title="Choose a handover">
+            <EmptyState icon="pointer" title="Choose a handover">
               Select the claimant’s item to enter their code.
             </EmptyState>
           )}

@@ -16,6 +16,7 @@ import {
   type TextareaHTMLAttributes,
 } from 'react'
 import { errorMessage, statusInfo, type Tone } from './format'
+import { StateIcon, type StateIconName } from './icons'
 
 /* ---------- data loading ---------- */
 
@@ -107,12 +108,12 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 }
 
 export function EmptyState({
-  icon = '🔍',
+  icon = 'search',
   title,
   children,
   action,
 }: {
-  icon?: string
+  icon?: StateIconName
   title: string
   children?: ReactNode
   action?: ReactNode
@@ -120,7 +121,7 @@ export function EmptyState({
   return (
     <div className="state">
       <div className="state-icon" aria-hidden="true">
-        {icon}
+        <StateIcon name={icon} />
       </div>
       <p className="state-title">{title}</p>
       {children && <div className="state-text">{children}</div>}
@@ -489,7 +490,7 @@ export function Tabs<T extends string>({
           onClick={() => onChange(t.id)}
         >
           {t.label}
-          {t.count !== undefined && <span className="tab-count">{t.count}</span>}
+          {t.count !== undefined && <span className={`tab-count ${t.count > 0 ? 'tab-count-on' : ''}`}>{t.count}</span>}
         </button>
       ))}
     </div>

@@ -168,7 +168,7 @@ export function MyClaimsPage() {
         state={state}
         isEmpty={(d) => d.length === 0}
         empty={
-          <EmptyState icon="🙋" title="No claims yet" action={<Button onClick={() => navigate('/')}>Browse found items</Button>}>
+          <EmptyState icon="hand" title="No claims yet" action={<Button onClick={() => navigate('/')}>Browse found items</Button>}>
             When you spot your item, open it and choose “This is mine”.
           </EmptyState>
         }

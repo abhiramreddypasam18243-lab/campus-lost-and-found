@@ -11,7 +11,7 @@ import { ClaimDetailPage, ClaimFormPage, MyClaimsPage } from './pages/Claims'
 import { DeskPage, ModClaimPage, ModReportPage, QueuePage } from './pages/Moderation'
 import { MyReportDetailPage, MyReportsPage, ReportFormPage } from './pages/Reports'
 
-type NavItem = { to: string; label: string; match: (p: string) => boolean }
+type NavItem = { to: string; label: string; match: (p: string) => boolean; staffStart?: boolean }
 
 function navFor(role: string | undefined): NavItem[] {
   const items: NavItem[] = [
@@ -21,7 +21,7 @@ function navFor(role: string | undefined): NavItem[] {
   ]
   if (role === 'moderator' || role === 'admin') {
     items.push(
-      { to: '/mod/queue', label: 'Queue', match: (p) => p.startsWith('/mod/queue') || p.startsWith('/mod/claims') || p.startsWith('/mod/reports') },
+      { to: '/mod/queue', label: 'Queue', staffStart: true, match: (p) => p.startsWith('/mod/queue') || p.startsWith('/mod/claims') || p.startsWith('/mod/reports') },
       { to: '/mod/desk', label: 'Handover desk', match: (p) => p.startsWith('/mod/desk') },
       { to: '/dashboard', label: 'Dashboard', match: (p) => p.startsWith('/dashboard') },
     )
@@ -53,7 +53,7 @@ function Header({ route }: { route: Route }) {
           <>
             <nav className="nav" aria-label="Main">
               {items.map((it) => (
-                <Link key={it.to} to={it.to} className={`nav-link ${it.match(route.path) ? 'nav-active' : ''}`} aria-current={it.match(route.path) ? 'page' : undefined}>
+                <Link key={it.to} to={it.to} className={`nav-link ${it.match(route.path) ? 'nav-active' : ''} ${it.staffStart ? 'nav-staff-start' : ''}`} aria-current={it.match(route.path) ? 'page' : undefined}>
                   {it.label}
                 </Link>
               ))}
@@ -123,7 +123,7 @@ function Header({ route }: { route: Route }) {
       {user && (
         <nav className="nav-mobile" aria-label="Main (mobile)">
           {items.map((it) => (
-            <Link key={it.to} to={it.to} className={`nav-link ${it.match(route.path) ? 'nav-active' : ''}`} aria-current={it.match(route.path) ? 'page' : undefined}>
+            <Link key={it.to} to={it.to} className={`nav-link ${it.match(route.path) ? 'nav-active' : ''} ${it.staffStart ? 'nav-staff-start' : ''}`} aria-current={it.match(route.path) ? 'page' : undefined}>
               {it.label}
             </Link>
           ))}
@@ -135,7 +135,7 @@ function Header({ route }: { route: Route }) {
 
 function Forbidden() {
   return (
-    <EmptyState icon="🚫" title="You don’t have access to this page" action={<Button onClick={() => navigate('/')}>Go home</Button>}>
+    <EmptyState icon="blocked" title="You don’t have access to this page" action={<Button onClick={() => navigate('/')}>Go home</Button>}>
       This area is for campus staff.
     </EmptyState>
   )
@@ -143,7 +143,7 @@ function Forbidden() {
 
 function NotFoundPage() {
   return (
-    <EmptyState icon="🧭" title="Page not found" action={<Button onClick={() => navigate('/')}>Go home</Button>} />
+    <EmptyState icon="compass" title="Page not found" action={<Button onClick={() => navigate('/')}>Go home</Button>} />
   )
 }
 

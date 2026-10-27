@@ -130,7 +130,7 @@ export function NotificationsPage() {
       ) : loading && items.length === 0 ? (
         <Loading label="Loading notifications" />
       ) : items.length === 0 ? (
-        <EmptyState icon="🔔" title={filter === 'unread' ? 'You’re all caught up' : 'No notifications yet'}>
+        <EmptyState icon="bell" title={filter === 'unread' ? 'You’re all caught up' : 'No notifications yet'}>
           Match suggestions and claim updates appear here.
         </EmptyState>
       ) : (

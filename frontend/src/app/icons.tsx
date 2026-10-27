@@ -97,6 +97,105 @@ export function CategoryIcon({ category, size = 24 }: { category: string; size?:
   )
 }
 
+/* Icons for empty and error states, same 24px line style. */
+const STATE_SHAPES = {
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
+    </>
+  ),
+  check: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 12.5l2.7 2.7L16 9.8" />
+    </>
+  ),
+  inbox: (
+    <>
+      <path d="M3 13l3-8h12l3 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
+      <path d="M3 13h5l1.5 2.5h5L16 13h5" />
+    </>
+  ),
+  pointer: (
+    <>
+      <path d="M15 6l-6 6 6 6" />
+      <path d="M21 12H9" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
+  note: (
+    <>
+      <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z" />
+      <path d="M14 3v5h5M9 13h6M9 17h4" />
+    </>
+  ),
+  hand: (
+    <>
+      <path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11" />
+      <path d="M11 10.5V4.5a1.5 1.5 0 0 1 3 0V11" />
+      <path d="M14 10.5V6a1.5 1.5 0 0 1 3 0v7a7 7 0 0 1-7 7h-.6a6 6 0 0 1-4.6-2.2L3.6 15a1.6 1.6 0 0 1 2.4-2l2 1.6" />
+    </>
+  ),
+  bell: (
+    <>
+      <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+    </>
+  ),
+  blocked: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M5.7 5.7l12.6 12.6" />
+    </>
+  ),
+  compass: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M15.5 8.5l-2 5-5 2 2-5z" />
+    </>
+  ),
+  gear: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1" />
+    </>
+  ),
+  chip: (
+    <>
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+      <path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4" />
+    </>
+  ),
+  building: (
+    <>
+      <path d="M3 21h18M5 21V10l7-5 7 5v11" />
+      <path d="M9 21v-6h6v6" />
+    </>
+  ),
+  chart: (
+    <>
+      <path d="M4 20V4M4 20h16" />
+      <path d="M8 16v-4M12 16V8M16 16v-6" />
+    </>
+  ),
+} satisfies Record<string, ReactNode>
+
+export type StateIconName = keyof typeof STATE_SHAPES
+
+export function StateIcon({ name, size = 30 }: { name: StateIconName; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {STATE_SHAPES[name]}
+    </svg>
+  )
+}
+
 export function LockIcon({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">

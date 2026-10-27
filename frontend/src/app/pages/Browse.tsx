@@ -274,7 +274,7 @@ export function BrowsePage() {
         <Loading label="Loading found items" />
       ) : items.length === 0 ? (
         <EmptyState
-          icon="🧭"
+          icon="compass"
           title={active ? 'No items match those filters' : 'Nothing has been handed in yet'}
           action={
             <Button variant="secondary" onClick={() => navigate('/report/new?type=lost')}>

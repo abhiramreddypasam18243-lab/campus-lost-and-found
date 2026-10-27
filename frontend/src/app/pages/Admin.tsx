@@ -34,9 +34,9 @@ import {
 
 /* ---------------- dashboard ---------------- */
 
-function Stat({ label, value, note }: { label: string; value: ReactNode; note?: string }) {
+function Stat({ label, value, note, feature = false }: { label: string; value: ReactNode; note?: string; feature?: boolean }) {
   return (
-    <div className="stat">
+    <div className={`stat ${feature ? 'stat-feature' : ''}`}>
       <span className="stat-label">{label}</span>
       <span className="stat-value">{value}</span>
       {note && <span className="stat-note">{note}</span>}
@@ -61,7 +61,7 @@ export function DashboardPage() {
               {d.banner_notice}
             </Alert>
             <div className="stats">
-              <Stat label="Recovery rate" value={percent(d.recovery_rate)} note="returned ÷ (returned + unclaimed)" />
+              <Stat feature label="Recovery rate" value={percent(d.recovery_rate)} note="returned ÷ (returned + unclaimed)" />
               <Stat label="Median time to recovery" value={hours(d.median_time_to_recovery_hours)} note="found report → handover" />
               <Stat label="Unclaimed rate" value={percent(d.unclaimed_rate)} note="unclaimed ÷ created" />
               <Stat label="Queue age (median)" value={hours(d.queue_age_median_hours)} note="claims waiting for review" />
@@ -194,7 +194,7 @@ function JobsTab() {
       <AsyncView
         state={state}
         isEmpty={(d) => d.jobs.length === 0}
-        empty={<EmptyState icon="🧰" title="No jobs in this state" />}
+        empty={<EmptyState icon="gear" title="No jobs in this state" />}
       >
         {(d) => (
           <div className="table-wrap">
@@ -257,7 +257,7 @@ function JobsTab() {
 function ModelsTab() {
   const state = useAsync(() => api.get<ModelEntry[]>('/api/admin/models'), [])
   return (
-    <AsyncView state={state} isEmpty={(d) => d.length === 0} empty={<EmptyState icon="🧠" title="No models registered" />}>
+    <AsyncView state={state} isEmpty={(d) => d.length === 0} empty={<EmptyState icon="chip" title="No models registered" />}>
       {(models) => (
         <Card>
           <div className="table-wrap">
@@ -459,7 +459,7 @@ function LocationsTab() {
     <div className="grid-2 grid-wide-left">
       <Card>
         <h2>Campus tree</h2>
-        <AsyncView state={locs} isEmpty={(d) => d.length === 0} empty={<EmptyState icon="🏛️" title="No locations yet" />}>
+        <AsyncView state={locs} isEmpty={(d) => d.length === 0} empty={<EmptyState icon="building" title="No locations yet" />}>
           {() =>
             index && (
               <ul className="tree tree-root">
@@ -598,7 +598,7 @@ function EvaluationTab() {
   const state = useAsync(() => api.get<Evaluation>('/api/admin/evaluation'), [])
   if (state.error instanceof ApiError && state.error.code === 'no_results') {
     return (
-      <EmptyState icon="🧪" title="No evaluation results yet">
+      <EmptyState icon="chart" title="No evaluation results yet">
         Run the frozen evaluation offline: <code>python -m eval.runner final</code>. Results are never computed on live data.
       </EmptyState>
     )

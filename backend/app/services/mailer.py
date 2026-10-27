@@ -9,12 +9,61 @@ from __future__ import annotations
 import asyncio
 import logging
 import smtplib
+import socket
 from email.message import EmailMessage
 from urllib.parse import quote
+
+import httpx
 
 from app.core.config import get_settings
 
 logger = logging.getLogger("mailer")
+
+
+async def _send_resend(to_address: str, subject: str, body: str) -> None:
+    settings = get_settings()
+    from_addr = settings.SMTP_FROM
+    if not ("@" in from_addr and not from_addr.endswith("campus.edu")):
+        from_addr = "Campus Lost and Found <onboarding@resend.dev>"
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": from_addr,
+                "to": [to_address],
+                "subject": subject,
+                "text": body,
+            },
+        )
+        if resp.status_code >= 400:
+            raise RuntimeError(f"Resend API error ({resp.status_code}): {resp.text}")
+
+
+async def _send_brevo(to_address: str, subject: str, body: str) -> None:
+    settings = get_settings()
+    from_addr = settings.SMTP_FROM
+    if not ("@" in from_addr and not from_addr.endswith("campus.edu")):
+        from_addr = "verify@campuslostandfound.com"
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "api-key": settings.BREVO_API_KEY or "",
+                "Content-Type": "application/json",
+            },
+            json={
+                "sender": {"email": from_addr, "name": "Campus Lost and Found"},
+                "to": [{"email": to_address}],
+                "subject": subject,
+                "textContent": body,
+            },
+        )
+        if resp.status_code >= 400:
+            raise RuntimeError(f"Brevo API error ({resp.status_code}): {resp.text}")
 
 
 def _send_sync(to_address: str, subject: str, body: str, message_id: str | None) -> None:
@@ -30,26 +79,51 @@ def _send_sync(to_address: str, subject: str, body: str, message_id: str | None)
     port = int(settings.SMTP_PORT)
     use_tls = str(settings.SMTP_USE_TLS).lower() in ("true", "1", "yes")
 
-    if port == 465:
-        with smtplib.SMTP_SSL(settings.SMTP_HOST, port, timeout=15) as smtp:
-            if settings.SMTP_USER and settings.SMTP_PASSWORD:
-                smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            smtp.send_message(msg)
-    else:
-        with smtplib.SMTP(settings.SMTP_HOST, port, timeout=15) as smtp:
-            smtp.ehlo()
-            if use_tls:
-                smtp.starttls()
+    # Force IPv4 to avoid IPv6 unroutable errors
+    host = settings.SMTP_HOST
+    try:
+        infos = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
+        if infos:
+            host = str(infos[0][4][0])
+    except Exception:
+        pass
+
+    try:
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=15) as smtp:
+                if settings.SMTP_USER and settings.SMTP_PASSWORD:
+                    smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                smtp.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port, timeout=15) as smtp:
                 smtp.ehlo()
-            if settings.SMTP_USER and settings.SMTP_PASSWORD:
-                smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            smtp.send_message(msg)
+                if use_tls:
+                    smtp.starttls()
+                    smtp.ehlo()
+                if settings.SMTP_USER and settings.SMTP_PASSWORD:
+                    smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                smtp.send_message(msg)
+    except OSError as exc:
+        if getattr(exc, "errno", None) in (101, 111):
+            raise OSError(
+                f"{exc}. Note: Render free tier blocks outbound SMTP ports (25, 465, 587). "
+                "Add RESEND_API_KEY in Render to send via HTTPS (port 443)."
+            ) from exc
+        raise
 
 
 async def send_email(
     to_address: str, subject: str, body: str, message_id: str | None = None
 ) -> None:
-    """Send one email without blocking the event loop. Raises on SMTP failure."""
+    """Send one email without blocking the event loop. Uses HTTP API if configured, else SMTP."""
+    settings = get_settings()
+    if settings.RESEND_API_KEY:
+        await _send_resend(to_address, subject, body)
+        return
+    if settings.BREVO_API_KEY:
+        await _send_brevo(to_address, subject, body)
+        return
+
     await asyncio.to_thread(_send_sync, to_address, subject, body, message_id)
 
 

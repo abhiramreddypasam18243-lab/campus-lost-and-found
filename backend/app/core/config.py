@@ -72,13 +72,15 @@ class Settings(BaseSettings):
             url = url.replace("ssl=true", "sslmode=require")
         return url
 
-    # Mail / SMTP
+    # Mail / SMTP & HTTP Email APIs (D8: Resend/Brevo bypass Render free tier port 587 block)
     SMTP_HOST: str = "localhost"
     SMTP_PORT: int = 1025
     SMTP_FROM: str = "no-reply@campus.edu"
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
     SMTP_USE_TLS: bool = False
+    RESEND_API_KEY: str | None = None
+    BREVO_API_KEY: str | None = None
     # Base URL of the web app, used in emailed links (verification)
     APP_BASE_URL: str = "http://localhost:8080"
 

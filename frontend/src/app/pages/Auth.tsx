@@ -39,7 +39,9 @@ export function LoginPage({ next }: { next: string }) {
     <div className="auth-layout">
       <div className="auth-intro">
         <p className="eyebrow">Campus Lost &amp; Found</p>
-        <h1 className="auth-title">Lost something on campus? Found something?</h1>
+        <h1 className="auth-title">
+          Lost it? <em>Someone</em> probably found it.
+        </h1>
         <p className="auth-lead">
           Report it once. We suggest likely matches using the description, photos, place and time —
           and a moderator checks every claim before anything changes hands.

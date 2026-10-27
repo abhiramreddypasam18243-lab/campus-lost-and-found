@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api, qs, type FoundList, type FoundSummary, type PublicReport, type StaffReport } from '../api'
 import { isStaff, useAuth } from '../auth'
-import { CATEGORIES, categoryIcon, categoryLabel, formatDate, SENSITIVE_CATEGORIES } from '../format'
+import { CATEGORIES, categoryLabel, formatDate, SENSITIVE_CATEGORIES } from '../format'
+import { CategoryIcon, LockIcon } from '../icons'
 import { buildingOptions, indexLocations, pathLabel, useLocations } from '../locations'
 import { Link, navigate } from '../router'
 import {
@@ -37,10 +38,15 @@ export function ItemPhoto({
   const hidden = SENSITIVE_CATEGORIES.has(category)
   return (
     <div className={`photo photo-${size} photo-placeholder`} aria-label={hidden ? 'Photo hidden for privacy' : 'No photo'} role="img">
-      <span className="photo-icon" aria-hidden="true">
-        {categoryIcon(category)}
+      <span className="photo-icon">
+        <CategoryIcon category={category} size={size === 'thumb' ? 24 : size === 'large' ? 56 : 40} />
       </span>
-      {size !== 'thumb' && <span className="photo-note">{hidden ? 'Photo hidden for privacy' : 'No photo'}</span>}
+      {size !== 'thumb' && (
+        <span className="photo-note">
+          {hidden && <LockIcon size={12} />}
+          {hidden ? 'Photo hidden for privacy' : 'No photo'}
+        </span>
+      )}
     </div>
   )
 }

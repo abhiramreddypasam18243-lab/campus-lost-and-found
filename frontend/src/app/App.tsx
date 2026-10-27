@@ -222,17 +222,10 @@ function VerifyBanner() {
     setResending(true)
     setStatusMsg(null)
     try {
-      const res = await api.post<{ verification_code?: string }>('/api/auth/resend-verification')
-      if (res.verification_code) {
-        setStatusMsg({
-          tone: 'info',
-          text: `Verification code: ${res.verification_code} (Enter this code above to verify)`,
-        })
-      } else {
-        setStatusMsg({ tone: 'info', text: 'Verification code resent to your email.' })
-      }
+      await api.post('/api/auth/resend-verification')
+      setStatusMsg({ tone: 'info', text: 'A new 6-digit verification code has been emailed to your Gmail.' })
     } catch {
-      setStatusMsg({ tone: 'danger', text: 'Unable to resend verification code.' })
+      setStatusMsg({ tone: 'danger', text: 'Unable to send verification email. Please check your SMTP settings.' })
     } finally {
       setResending(false)
     }

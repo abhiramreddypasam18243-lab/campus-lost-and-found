@@ -113,7 +113,7 @@ export function RegisterPage() {
   const [confirm, setConfirm] = useState('')
   const [fields, setFields] = useState<Record<string, string>>({})
   const [error, setError] = useState<unknown>(null)
-  const [done, setDone] = useState<{ email: string; code?: string } | null>(null)
+  const [done, setDone] = useState<{ email: string } | null>(null)
   const [verifyInput, setVerifyInput] = useState('')
   const [verifying, setVerifying] = useState(false)
   const [verifyError, setVerifyError] = useState<string | null>(null)
@@ -131,12 +131,12 @@ export function RegisterPage() {
     setBusy(true)
     setError(null)
     try {
-      const res = await api.post<{ email: string; verification_code?: string; verification_url?: string }>('/api/auth/register', {
+      await api.post('/api/auth/register', {
         email: email.trim(),
         password,
         display_name: name.trim() || null,
       })
-      setDone({ email: email.trim(), code: res.verification_code })
+      setDone({ email: email.trim() })
     } catch (err) {
       if (err instanceof ApiError && err.code === 'email_domain_not_allowed') {
         setFields({ email: errorMessage(err) })
@@ -156,7 +156,7 @@ export function RegisterPage() {
         <Card>
           <div className="state">
             <div className="state-icon" aria-hidden="true">{verifiedSuccess ? '✅' : '📬'}</div>
-            <h1 className="state-title">{verifiedSuccess ? 'Email confirmed' : 'Verify your campus email'}</h1>
+            <h1 className="state-title">{verifiedSuccess ? 'Email confirmed' : 'Check your email'}</h1>
             {verifiedSuccess ? (
               <div>
                 <p className="state-text">Your campus email has been verified successfully. You can now sign in.</p>
@@ -165,13 +165,9 @@ export function RegisterPage() {
             ) : (
               <div style={{ width: '100%' }}>
                 <p className="state-text">
-                  Enter the 6-digit verification code sent to <strong>{done.email}</strong>.
+                  A 6-digit verification code has been sent to <strong>{done.email}</strong>.
+                  Check your inbox and enter the code below to activate your account.
                 </p>
-                {done.code && (
-                  <Alert tone="info" title="Verification code">
-                    Your code is: <strong>{done.code}</strong> (Enter this code below)
-                  </Alert>
-                )}
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault()

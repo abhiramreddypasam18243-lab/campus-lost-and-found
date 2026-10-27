@@ -33,24 +33,20 @@ class VerifyEmailRequest(BaseModel):
 
 
 class RegisterResponse(BaseModel):
-    """Registration response with verification code and link."""
+    """Registration response."""
 
     model_config = ConfigDict(extra="forbid")
 
     message: str
     email: str
-    verification_code: str | None = None
-    verification_url: str | None = None
 
 
 class ResendVerificationResponse(BaseModel):
-    """Resend email verification response with verification code and link."""
+    """Resend email verification response."""
 
     model_config = ConfigDict(extra="forbid")
 
     message: str
-    verification_code: str | None = None
-    verification_url: str | None = None
 
 
 class UserResponse(BaseModel):

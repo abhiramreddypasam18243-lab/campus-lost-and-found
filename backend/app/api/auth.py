@@ -131,10 +131,8 @@ async def register(
     await send_verification_email(email_clean, raw_token, raw_code)
 
     return RegisterResponse(
-        message="Account created. Verification code sent to email.",
+        message="Account created. Verification code sent to your email.",
         email=email_clean,
-        verification_code=raw_code,
-        verification_url=f"/#/verify?token={raw_token}",
     )
 
 
@@ -169,9 +167,7 @@ async def resend_verification(
     await send_verification_email(current_user.email, raw_token, raw_code)
 
     return ResendVerificationResponse(
-        message="Verification code sent to email.",
-        verification_code=raw_code,
-        verification_url=f"/#/verify?token={raw_token}",
+        message="Verification code sent to your email.",
     )
 
 

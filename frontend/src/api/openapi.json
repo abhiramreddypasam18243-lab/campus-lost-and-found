@@ -2300,7 +2300,7 @@
       },
       "RegisterResponse": {
         "additionalProperties": false,
-        "description": "Registration response with verification code and link.",
+        "description": "Registration response.",
         "properties": {
           "email": {
             "title": "Email",
@@ -2309,28 +2309,6 @@
           "message": {
             "title": "Message",
             "type": "string"
-          },
-          "verification_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verification Code"
-          },
-          "verification_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verification Url"
           }
         },
         "required": [
@@ -2488,33 +2466,11 @@
       },
       "ResendVerificationResponse": {
         "additionalProperties": false,
-        "description": "Resend email verification response with verification code and link.",
+        "description": "Resend email verification response.",
         "properties": {
           "message": {
             "title": "Message",
             "type": "string"
-          },
-          "verification_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verification Code"
-          },
-          "verification_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verification Url"
           }
         },
         "required": [

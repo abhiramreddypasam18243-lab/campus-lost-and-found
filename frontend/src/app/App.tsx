@@ -40,7 +40,10 @@ function Header({ route }: { route: Route }) {
       <div className="topbar-inner">
         <Link to="/" className="brand" aria-label="Campus Lost and Found, home">
           <span className="brand-mark" aria-hidden="true">
-            ◎
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="M20 20l-4-4" />
+            </svg>
           </span>
           <span className="brand-text">
             Campus <strong>Lost &amp; Found</strong>
@@ -57,7 +60,10 @@ function Header({ route }: { route: Route }) {
             </nav>
             <div className="topbar-actions">
               <Link to="/notifications" className="icon-btn" aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}>
-                <span aria-hidden="true">🔔</span>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                </svg>
                 {unread > 0 && (
                   <span className="dot-count" aria-hidden="true">
                     {unread > 9 ? '9+' : unread}

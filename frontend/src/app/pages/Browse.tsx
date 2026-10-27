@@ -45,6 +45,35 @@ export function ItemPhoto({
   )
 }
 
+function SearchIcon() {
+  return (
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
+    </svg>
+  )
+}
+
+function GiftIcon() {
+  return (
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 12v8H4v-8" />
+      <path d="M2 7h20v5H2z" />
+      <path d="M12 22V7" />
+      <path d="M12 7C10 3 7 3 7 5s5 2 5 2 5 0 5-2-3-2-5 2" />
+    </svg>
+  )
+}
+
+function PinIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </svg>
+  )
+}
+
 export function ItemCard({ item }: { item: FoundSummary }) {
   return (
     <article className="item-card">
@@ -57,7 +86,10 @@ export function ItemCard({ item }: { item: FoundSummary }) {
           </div>
           <h3 className="item-card-title">{item.title}</h3>
           <p className="item-card-desc">{item.description}</p>
-          <p className="item-card-place">📍 {item.building ?? 'On campus'}</p>
+          <p className="item-card-place">
+            <PinIcon />
+            {item.building ?? 'On campus'}
+          </p>
         </div>
       </Link>
     </article>
@@ -124,18 +156,65 @@ export function BrowsePage() {
 
   return (
     <>
-      <PageHeader
-        title="Found on campus"
-        subtitle="Items handed in by the campus community. Private details and exact spots are never shown here."
-        actions={
-          <>
-            <Button variant="secondary" onClick={() => navigate('/report/new?type=found')}>
-              I found something
-            </Button>
-            <Button onClick={() => navigate('/report/new?type=lost')}>I lost something</Button>
-          </>
-        }
-      />
+      <section className="hero" aria-labelledby="hero-title">
+        <h1 id="hero-title" className="hero-title">
+          Lost it? <em>Someone</em> probably found it.
+        </h1>
+        <div className="action-tiles">
+          <button
+            type="button"
+            className="action-tile action-tile-lost"
+            aria-labelledby="tile-lost"
+            aria-describedby="tile-lost-text"
+            onClick={() => navigate('/report/new?type=lost')}
+          >
+            <SearchIcon />
+            <span>
+              <span id="tile-lost" className="action-tile-title">I lost something</span>
+              <span id="tile-lost-text" className="action-tile-text">
+                Report it and we’ll match it against every found item, automatically.
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="action-tile action-tile-found"
+            aria-labelledby="tile-found"
+            aria-describedby="tile-found-text"
+            onClick={() => navigate('/report/new?type=found')}
+          >
+            <GiftIcon />
+            <span>
+              <span id="tile-found" className="action-tile-title">I found something</span>
+              <span id="tile-found-text" className="action-tile-text">
+                Hand it in online in under a minute. Owners prove it’s theirs.
+              </span>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <div className="listing-head">
+        <h2>Found on campus</h2>
+        <p className="muted small">Private details and exact spots are never shown here.</p>
+      </div>
+
+      <div className="chips" role="group" aria-label="Quick filter by category">
+        {[{ id: '', label: 'All' }, ...CATEGORIES].map((c) => (
+          <button
+            key={c.id || 'all'}
+            type="button"
+            className="chip"
+            aria-pressed={filters.category === c.id}
+            onClick={() => {
+              setDraft({ ...draft, category: c.id })
+              setFilters({ ...filters, category: c.id })
+            }}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
 
       <Card className="filters">
         <form onSubmit={apply} className="filters-form" role="search" aria-label="Search found items">

@@ -250,46 +250,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/resend-verification": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Resend Verification
-         * @description AC-02: Resend email verification code for the currently logged-in user.
-         */
-        post: operations["resend_verification_api_auth_resend_verification_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auth/verify-email": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Verify Email
-         * @description AC-02: Verify email using single-use 6-digit code or link token.
-         */
-        post: operations["verify_email_api_auth_verify_email_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/claims": {
         parameters: {
             query?: never;
@@ -2039,11 +1999,6 @@ export interface components {
             email: string;
             /** Message */
             message: string;
-            /**
-             * Verified
-             * @default false
-             */
-            verified: boolean;
         };
         /** ReportDispositionRequest */
         ReportDispositionRequest: {
@@ -2115,14 +2070,6 @@ export interface components {
              */
             id: string;
         };
-        /**
-         * ResendVerificationResponse
-         * @description Resend email verification response.
-         */
-        ResendVerificationResponse: {
-            /** Message */
-            message: string;
-        };
         /** RetentionRunResponse */
         RetentionRunResponse: {
             /** Expired Reports */
@@ -2188,16 +2135,6 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
-        };
-        /**
-         * VerifyEmailRequest
-         * @description Email verification schema by token or 6-digit numeric code.
-         */
-        VerifyEmailRequest: {
-            /** Code */
-            code?: string | null;
-            /** Token */
-            token?: string | null;
         };
     };
     responses: never;
@@ -2601,72 +2538,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RegisterResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    resend_verification_api_auth_resend_verification_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: {
-                session_id?: string | null;
-            };
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ResendVerificationResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    verify_email_api_auth_verify_email_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["VerifyEmailRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
                 };
             };
             /** @description Validation Error */

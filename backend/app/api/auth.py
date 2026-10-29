@@ -1,4 +1,3 @@
-import secrets
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -24,20 +23,17 @@ from app.core.security import (
     verify_dummy_password,
     verify_password,
 )
-from app.models.user import EmailToken, Session, User
+from app.models.user import Session, User
 from app.schemas.auth import (
     CsrfResponse,
     LoginRequest,
     LoginResponse,
     RegisterRequest,
     RegisterResponse,
-    ResendVerificationResponse,
     UpdateMeRequest,
     UserResponse,
-    VerifyEmailRequest,
 )
 from app.services.audit import write_audit_log
-from app.services.mailer import send_verification_email
 
 router = APIRouter(prefix="/api", tags=["auth"])
 settings = get_settings()
@@ -83,53 +79,19 @@ async def register(
             detail={"code": "email_already_registered", "message": "Email is already registered."},
         )
 
-    # Create unverified user with Argon2id hash
+    # D-25: no emailed code. The campus-domain list is the only gate, so the account is
+    # verified at once and no mail is sent.
     pwd_hash = hash_password(req.password)
     new_user = User(
         email=email_clean,
         password_hash=pwd_hash,
         display_name=req.display_name,
         role="user",
-        email_verified_at=utc_now() if settings.AUTO_VERIFY_EMAIL else None,
+        email_verified_at=utc_now(),
         status="active",
     )
     db.add(new_user)
     await db.flush()
-
-    if settings.AUTO_VERIFY_EMAIL:
-        # D-24: no token, no mail; the audit entry records that nobody proved the address.
-        await write_audit_log(
-            db=db,
-            actor_id=new_user.id,
-            role="user",
-            action="user_registered",
-            entity_type="user",
-            entity_id=new_user.id,
-            summary={"email": email_clean, "auto_verified": True},
-        )
-        await db.commit()
-        return RegisterResponse(
-            message="Account created and verified.", email=email_clean, verified=True
-        )
-
-    # Create verification token & 6-digit code (expires in 24 hours per AC-02)
-    raw_token = generate_secure_token()
-    raw_code = f"{secrets.randbelow(900000) + 100000}"
-    expires_at = utc_now() + timedelta(hours=24)
-    token_entry = EmailToken(
-        user_id=new_user.id,
-        token_hash=hash_token(raw_token),
-        purpose="verify_email",
-        expires_at=expires_at,
-    )
-    code_entry = EmailToken(
-        user_id=new_user.id,
-        token_hash=hash_token(raw_code),
-        purpose="verify_email",
-        expires_at=expires_at,
-    )
-    db.add(token_entry)
-    db.add(code_entry)
 
     await write_audit_log(
         db=db,
@@ -142,117 +104,7 @@ async def register(
     )
     await db.commit()
 
-    # Sent after commit so a mail outage never loses the account; a failure is logged
-    # (never the token or the address) and registration still succeeds.
-    await send_verification_email(email_clean, raw_token, raw_code)
-
-    return RegisterResponse(
-        message="Account created. Verification code sent to your email.",
-        email=email_clean,
-    )
-
-
-@router.post("/auth/resend-verification", response_model=ResendVerificationResponse)
-async def resend_verification(
-    current_user: User = Depends(require_authenticated_user),
-    db: AsyncSession = Depends(get_db),
-) -> ResendVerificationResponse:
-    """AC-02: Resend email verification code for the currently logged-in user."""
-    if current_user.email_verified_at is not None:
-        return ResendVerificationResponse(message="Email is already verified.")
-
-    raw_token = generate_secure_token()
-    raw_code = f"{secrets.randbelow(900000) + 100000}"
-    expires_at = utc_now() + timedelta(hours=24)
-    token_entry = EmailToken(
-        user_id=current_user.id,
-        token_hash=hash_token(raw_token),
-        purpose="verify_email",
-        expires_at=expires_at,
-    )
-    code_entry = EmailToken(
-        user_id=current_user.id,
-        token_hash=hash_token(raw_code),
-        purpose="verify_email",
-        expires_at=expires_at,
-    )
-    db.add(token_entry)
-    db.add(code_entry)
-    await db.commit()
-
-    sent, err_msg = await send_verification_email(current_user.email, raw_token, raw_code)
-    if not sent:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail={
-                "code": "email_delivery_failed",
-                "message": f"Could not deliver email ({err_msg}). Please check SMTP settings in Render.",
-            },
-        )
-
-    return ResendVerificationResponse(
-        message="Verification code sent to your email.",
-    )
-
-
-@router.post("/auth/verify-email")
-async def verify_email(
-    req: VerifyEmailRequest,
-    db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
-    """AC-02: Verify email using single-use 6-digit code or link token."""
-    submitted = (req.code or req.token or "").strip()
-    if not submitted:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={"code": "missing_code", "message": "Verification code is required."},
-        )
-
-    token_hash = hash_token(submitted)
-    now = utc_now()
-
-    stmt = select(EmailToken).where(
-        EmailToken.token_hash == token_hash,
-        EmailToken.purpose == "verify_email",
-    )
-    token_entry = (await db.execute(stmt)).scalar_one_or_none()
-
-    # Reused or expired code/token returns 410 per AC-02
-    if not token_entry or token_entry.used_at is not None or token_entry.expires_at < now:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail={
-                "code": "token_expired_or_invalid",
-                "message": "Verification code has expired or been used.",
-            },
-        )
-
-    # Mark all active verification tokens for this user as used
-    token_entry.used_at = now
-    stmt_tokens = select(EmailToken).where(
-        EmailToken.user_id == token_entry.user_id,
-        EmailToken.purpose == "verify_email",
-        EmailToken.used_at.is_(None),
-    )
-    all_user_tokens = (await db.execute(stmt_tokens)).scalars().all()
-    for t in all_user_tokens:
-        t.used_at = now
-
-    stmt_user = select(User).where(User.id == token_entry.user_id)
-    user = (await db.execute(stmt_user)).scalar_one()
-    user.email_verified_at = now
-
-    await write_audit_log(
-        db=db,
-        actor_id=user.id,
-        role=user.role,
-        action="email_verified",
-        entity_type="user",
-        entity_id=user.id,
-    )
-    await db.commit()
-
-    return {"message": "Email verified successfully."}
+    return RegisterResponse(message="Account created.", email=email_clean)
 
 
 @router.post("/auth/login", response_model=LoginResponse)

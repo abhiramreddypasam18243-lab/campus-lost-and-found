@@ -229,7 +229,6 @@ export function AccountPage() {
             items={[
               ['Email', user.email],
               ['Role', user.role],
-              ['Email verified', user.email_verified ? 'Yes' : 'Not yet — check your inbox'],
             ]}
           />
           <FormError error={error} />

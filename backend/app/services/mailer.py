@@ -11,7 +11,6 @@ import logging
 import smtplib
 import socket
 from email.message import EmailMessage
-from urllib.parse import quote
 
 import httpx
 
@@ -162,30 +161,3 @@ async def send_email(
         return
 
     await asyncio.to_thread(_send_sync, to_address, subject, body, message_id)
-
-
-async def send_verification_email(
-    to_address: str, raw_token: str, raw_code: str | None = None
-) -> tuple[bool, str | None]:
-    """AC-02: email the single-use verification code and link. Returns (success, error_reason)."""
-    settings = get_settings()
-    link = f"{settings.APP_BASE_URL.rstrip('/')}/#/verify?token={quote(raw_token)}"
-    code_block = (
-        f"\nYour 6-digit verification code is:\n  {raw_code}\n\nEnter this code on the website to activate your account.\n"
-        if raw_code
-        else ""
-    )
-    body = (
-        "Welcome to the Campus Lost and Found network.\n\n"
-        f"{code_block}\n"
-        f"You can also confirm your campus email address by opening this link:\n{link}\n\n"
-        "The code and link work once and expire in 24 hours. If you did not register, ignore this email."
-    )
-    subject = f"Your verification code: {raw_code}" if raw_code else "Confirm your campus email"
-    try:
-        await send_email(to_address, subject, body)
-    except Exception as exc:
-        err_msg = f"{type(exc).__name__}: {exc}"
-        logger.warning("verification email not sent: %s", err_msg)
-        return False, err_msg
-    return True, None

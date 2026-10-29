@@ -1,7 +1,6 @@
 """Endpoints the web client needs (spec 9 and 11): own reports, CSRF refresh, profile,
-claim form (D-20), handover desk list, verification email and the email outbox."""
+claim form (D-20), handover desk list, and the email outbox."""
 
-import re
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -20,7 +19,6 @@ from app.models.location import CampusLocation
 from app.models.notifications import Notification
 from app.models.report import ItemReport
 from app.models.user import Session, User
-from app.services import mailer
 from app.services.outbox import deliver_pending_emails
 
 settings = get_settings()
@@ -192,32 +190,6 @@ async def test_handover_desk_list_is_staff_only_and_has_no_code(
     assert item["is_locked"] is False
     assert hmac_value not in res.text
     assert "code" not in " ".join(item)
-
-
-@pytest.mark.asyncio
-async def test_ac_02_registration_emails_a_working_verification_link(
-    async_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    sent: list[tuple[str, str, str]] = []
-
-    async def fake_send(to: str, subject: str, body: str, message_id: str | None = None) -> None:
-        sent.append((to, subject, body))
-
-    monkeypatch.setattr(mailer, "send_email", fake_send)
-    res = await async_client.post(
-        "/api/auth/register",
-        json={"email": "newbie@campus.edu", "password": "a-long-enough-password"},
-    )
-    assert res.status_code == 201
-    [(to, _, body)] = sent
-    assert to == "newbie@campus.edu"
-    match = re.search(r"#/verify\?token=([A-Za-z0-9_\-%]+)", body)
-    assert match is not None
-
-    verify = await async_client.post("/api/auth/verify-email", json={"token": match.group(1)})
-    assert verify.status_code == 200
-    again = await async_client.post("/api/auth/verify-email", json={"token": match.group(1)})
-    assert again.status_code == 410
 
 
 @pytest.mark.asyncio

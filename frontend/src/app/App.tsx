@@ -1,11 +1,10 @@
 import { useState, type ReactNode } from 'react'
-import { api, ApiError } from './api'
 import { AuthProvider, isAdmin, isStaff, useAuth } from './auth'
 import { Link, navigate, useRoute, type Route } from './router'
-import { Alert, Button, EmptyState, Loading, ToastHost } from './ui'
+import { Button, EmptyState, Loading, ToastHost } from './ui'
 import { AccountPage, NotificationsPage, useUnreadCount } from './pages/Account'
 import { AdminPage, DashboardPage, toAdminTab } from './pages/Admin'
-import { LoginPage, RegisterPage, VerifyPage } from './pages/Auth'
+import { LoginPage, RegisterPage } from './pages/Auth'
 import { BrowsePage, FoundDetailPage } from './pages/Browse'
 import { ClaimDetailPage, ClaimFormPage, MyClaimsPage } from './pages/Claims'
 import { DeskPage, ModClaimPage, ModReportPage, QueuePage } from './pages/Moderation'
@@ -156,7 +155,6 @@ function Routes({ route }: { route: Route }) {
 
   // Public routes
   if (s0 === 'register') return <RegisterPage />
-  if (s0 === 'verify') return <VerifyPage token={q.get('token')} />
   if (s0 === 'login' || !user) return <LoginPage next={s0 === 'login' ? (q.get('next') ?? '/') : route.path} />
 
   const staffOnly = (node: ReactNode) => (isStaff(user) ? node : <Forbidden />)
@@ -196,89 +194,6 @@ function Routes({ route }: { route: Route }) {
   }
 }
 
-function VerifyBanner() {
-  const { user, refresh } = useAuth()
-  const [code, setCode] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [resending, setResending] = useState(false)
-  const [statusMsg, setStatusMsg] = useState<{ tone: 'danger' | 'info' | 'success'; text: string } | null>(null)
-  if (!user || user.email_verified) return null
-
-  const handleVerifyCode = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    const clean = code.trim()
-    if (!clean) {
-      setStatusMsg({ tone: 'danger', text: 'Please enter your verification code.' })
-      return
-    }
-    setSubmitting(true)
-    setStatusMsg(null)
-    try {
-      await api.post('/api/auth/verify-email', { token: clean })
-      setStatusMsg({ tone: 'success', text: 'Email verified successfully!' })
-      await refresh()
-    } catch {
-      setStatusMsg({ tone: 'danger', text: 'Invalid or expired verification code.' })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleResendCode = async () => {
-    setResending(true)
-    setStatusMsg(null)
-    try {
-      await api.post('/api/auth/resend-verification')
-      setStatusMsg({ tone: 'info', text: 'A new 6-digit verification code has been sent to your email.' })
-    } catch (err: unknown) {
-      const msg =
-        err instanceof ApiError && err.message
-          ? err.message
-          : 'Unable to send verification email. Please check your SMTP settings in Render.'
-      setStatusMsg({ tone: 'danger', text: msg })
-    } finally {
-      setResending(false)
-    }
-  }
-
-  return (
-    <div className="container" style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
-      <Alert tone="warning" title="Confirm your campus email">
-        <p style={{ margin: 0 }}>
-          Enter the 6-digit verification code sent to <strong>{user.email}</strong> to report items and make claims.
-        </p>
-        <form
-          onSubmit={handleVerifyCode}
-          style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}
-        >
-          <input
-            type="text"
-            className="input"
-            style={{ width: '150px', letterSpacing: '2px', fontWeight: 'bold', textAlign: 'center', padding: '0.35rem 0.5rem' }}
-            placeholder="6-digit code"
-            maxLength={32}
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
-          <Button type="submit" size="sm" busy={submitting}>
-            Verify Code
-          </Button>
-          <Button type="button" variant="ghost" size="sm" busy={resending} onClick={handleResendCode}>
-            Resend Code
-          </Button>
-        </form>
-        {statusMsg && (
-          <div style={{ marginTop: '0.5rem' }}>
-            <span className={`small ${statusMsg.tone === 'danger' ? 'text-danger' : 'muted'}`} style={{ fontWeight: '500' }}>
-              {statusMsg.text}
-            </span>
-          </div>
-        )}
-      </Alert>
-    </div>
-  )
-}
-
 function Shell() {
   const route = useRoute()
   return (
@@ -290,7 +205,6 @@ function Shell() {
         Skip to content
       </a>
       <Header route={route} />
-      <VerifyBanner />
       <main id="main" className="container main" tabIndex={-1}>
         <Routes route={route} />
       </main>

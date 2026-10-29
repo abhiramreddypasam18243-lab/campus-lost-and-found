@@ -2363,11 +2363,6 @@
           "message": {
             "title": "Message",
             "type": "string"
-          },
-          "verified": {
-            "default": false,
-            "title": "Verified",
-            "type": "boolean"
           }
         },
         "required": [
@@ -2541,21 +2536,6 @@
         "title": "ReporterSummary",
         "type": "object"
       },
-      "ResendVerificationResponse": {
-        "additionalProperties": false,
-        "description": "Resend email verification response.",
-        "properties": {
-          "message": {
-            "title": "Message",
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ],
-        "title": "ResendVerificationResponse",
-        "type": "object"
-      },
       "RetentionRunResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2717,40 +2697,6 @@
           "type"
         ],
         "title": "ValidationError",
-        "type": "object"
-      },
-      "VerifyEmailRequest": {
-        "additionalProperties": false,
-        "description": "Email verification schema by token or 6-digit numeric code.",
-        "properties": {
-          "code": {
-            "anyOf": [
-              {
-                "maxLength": 128,
-                "minLength": 4,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Code"
-          },
-          "token": {
-            "anyOf": [
-              {
-                "maxLength": 128,
-                "minLength": 4,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Token"
-          }
-        },
-        "title": "VerifyEmailRequest",
         "type": "object"
       }
     }
@@ -3518,102 +3464,6 @@
           }
         },
         "summary": "Register",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/auth/resend-verification": {
-      "post": {
-        "description": "AC-02: Resend email verification code for the currently logged-in user.",
-        "operationId": "resend_verification_api_auth_resend_verification_post",
-        "parameters": [
-          {
-            "in": "cookie",
-            "name": "session_id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResendVerificationResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Resend Verification",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/auth/verify-email": {
-      "post": {
-        "description": "AC-02: Verify email using single-use 6-digit code or link token.",
-        "operationId": "verify_email_api_auth_verify_email_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VerifyEmailRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Verify Email Api Auth Verify Email Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Verify Email",
         "tags": [
           "auth"
         ]

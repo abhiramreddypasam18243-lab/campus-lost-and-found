@@ -10,7 +10,7 @@ from app.models.user import User
 async def test_ac_01_registration_success(
     async_client: AsyncClient, db_session: AsyncSession
 ) -> None:
-    """AC-01: Valid campus email creates unverified account with Argon2id hash; password not returned."""
+    """AC-01 / D-25: Valid campus email creates a verified account with Argon2id hash; password not returned."""
     payload = {
         "email": "student1@campus.edu",
         "password": "valid_secure_password_1234",
@@ -29,7 +29,7 @@ async def test_ac_01_registration_success(
     user = (await db_session.execute(stmt)).scalar_one_or_none()
     assert user is not None
     assert user.password_hash.startswith("$argon2id$")
-    assert user.email_verified_at is None
+    assert user.email_verified_at is not None
     assert user.role == "user"
 
 

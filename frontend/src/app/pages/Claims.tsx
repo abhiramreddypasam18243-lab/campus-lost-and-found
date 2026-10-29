@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react'
 import { api, ApiError, type Claim, type ClaimForm, type Report } from '../api'
-import { useAuth } from '../auth'
 import { categoryLabel, errorMessage, formatDateTime, groupCode, timeAgo } from '../format'
 import { Link, navigate } from '../router'
 import {
@@ -55,7 +54,6 @@ function AnswersFields({
 }
 
 export function ClaimFormPage({ foundId, lostId }: { foundId: string; lostId: string | null }) {
-  const { user } = useAuth()
   const form = useAsync(() => api.get<ClaimForm>(`/api/found/${foundId}/claim-form`), [foundId])
   const mine = useAsync(() => api.get<Report[]>('/api/reports/mine'), [])
   const [evidence, setEvidence] = useState('')
@@ -105,11 +103,6 @@ export function ClaimFormPage({ foundId, lostId }: { foundId: string; lostId: st
             subtitle={`${cf.title} · ${categoryLabel(cf.category)} · ${cf.building ?? 'On campus'}`}
             back={{ to: `/found/${foundId}`, label: 'Back to item' }}
           />
-          {!user?.email_verified && (
-            <Alert tone="warning" title="Verify your email first">
-              Claims need a verified campus email.
-            </Alert>
-          )}
           <Card>
             <form onSubmit={(e) => submit(e, cf.verification_prompts)} noValidate className="form">
               <Alert tone="info">
@@ -147,7 +140,7 @@ export function ClaimFormPage({ foundId, lostId }: { foundId: string; lostId: st
                 <Button variant="ghost" onClick={() => navigate(`/found/${foundId}`)}>
                   Cancel
                 </Button>
-                <Button type="submit" busy={busy} disabled={!user?.email_verified}>
+                <Button type="submit" busy={busy}>
                   Submit claim
                 </Button>
               </div>

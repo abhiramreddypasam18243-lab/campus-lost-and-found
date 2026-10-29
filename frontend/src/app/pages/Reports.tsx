@@ -10,7 +10,6 @@ import {
   type StaffReport,
   type TimePrecision,
 } from '../api'
-import { useAuth } from '../auth'
 import { CATEGORIES, binTone, categoryLabel, errorMessage, formatDate, formatDateTime, PRECISIONS, todayISO } from '../format'
 import { indexLocations, PlaceField, placeLabel, useLocations, type PlaceValue } from '../locations'
 import { Link, navigate } from '../router'
@@ -110,7 +109,6 @@ function placeText(place: PlaceValue): string | null {
 }
 
 export function ReportFormPage({ initialType }: { initialType: 'lost' | 'found' }) {
-  const { user } = useAuth()
   const [type, setType] = useState<'lost' | 'found'>(initialType)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -127,7 +125,6 @@ export function ReportFormPage({ initialType }: { initialType: 'lost' | 'found' 
   const [busy, setBusy] = useState(false)
 
   useEffect(() => setType(initialType), [initialType])
-  const verified = user?.email_verified ?? false
 
   const validate = () => {
     const f: Record<string, string> = {}
@@ -217,11 +214,6 @@ export function ReportFormPage({ initialType }: { initialType: 'lost' | 'found' 
             : 'Found items are listed after a moderator checks them. Private details stay private.'
         }
       />
-      {!verified && (
-        <Alert tone="warning" title="Verify your email first">
-          Reporting needs a verified campus email. Open the link we emailed you.
-        </Alert>
-      )}
       <Card>
         <form onSubmit={submit} noValidate className="form">
           <div className="segmented" role="radiogroup" aria-label="Report type">
@@ -363,7 +355,7 @@ export function ReportFormPage({ initialType }: { initialType: 'lost' | 'found' 
             <Button variant="ghost" onClick={() => navigate('/reports')}>
               Cancel
             </Button>
-            <Button type="submit" busy={busy} disabled={!verified}>
+            <Button type="submit" busy={busy}>
               {type === 'lost' ? 'Save lost report' : 'Submit found item'}
             </Button>
           </div>

@@ -23,15 +23,6 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
-class VerifyEmailRequest(BaseModel):
-    """Email verification schema by token or 6-digit numeric code."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    token: str | None = Field(default=None, min_length=4, max_length=128)
-    code: str | None = Field(default=None, min_length=4, max_length=128)
-
-
 class RegisterResponse(BaseModel):
     """Registration response."""
 
@@ -39,15 +30,6 @@ class RegisterResponse(BaseModel):
 
     message: str
     email: str
-    verified: bool = False
-
-
-class ResendVerificationResponse(BaseModel):
-    """Resend email verification response."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    message: str
 
 
 class UserResponse(BaseModel):

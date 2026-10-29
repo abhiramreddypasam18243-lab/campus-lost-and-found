@@ -31,6 +31,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-campus_user}:${POSTGRES_PASSWORD:-campus_secure_password}@db:5432/${POSTGRES_DB:-campus_lost_and_found}
       - SYNC_DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-campus_user}:${POSTGRES_PASSWORD:-campus_secure_password}@db:5432/${POSTGRES_DB:-campus_lost_and_found}
       - ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS:-campus.edu,student.campus.edu,iisc.ac.in}
+      - AUTO_VERIFY_EMAIL=${AUTO_VERIFY_EMAIL:-true}
       - SMTP_HOST=mail
       - SMTP_PORT=1025
       - CORS_ORIGINS=http://localhost:8080,http://127.0.0.1:8080

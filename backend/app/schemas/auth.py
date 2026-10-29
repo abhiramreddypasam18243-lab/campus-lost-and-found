@@ -39,6 +39,7 @@ class RegisterResponse(BaseModel):
 
     message: str
     email: str
+    verified: bool = False
 
 
 class ResendVerificationResponse(BaseModel):

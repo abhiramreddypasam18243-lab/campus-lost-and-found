@@ -133,12 +133,13 @@ export function RegisterPage() {
     setBusy(true)
     setError(null)
     try {
-      await api.post('/api/auth/register', {
+      const res = await api.post<{ verified?: boolean }>('/api/auth/register', {
         email: email.trim(),
         password,
         display_name: name.trim() || null,
       })
       setDone({ email: email.trim() })
+      setVerifiedSuccess(res?.verified === true)
     } catch (err) {
       if (err instanceof ApiError && err.code === 'email_domain_not_allowed') {
         setFields({ email: errorMessage(err) })
@@ -158,10 +159,10 @@ export function RegisterPage() {
         <Card>
           <div className="state">
             <div className="state-icon" aria-hidden="true">{verifiedSuccess ? '✅' : '📬'}</div>
-            <h1 className="state-title">{verifiedSuccess ? 'Email confirmed' : 'Check your email'}</h1>
+            <h1 className="state-title">{verifiedSuccess ? 'Account ready' : 'Check your email'}</h1>
             {verifiedSuccess ? (
               <div>
-                <p className="state-text">Your campus email has been verified successfully. You can now sign in.</p>
+                <p className="state-text">Your campus email is confirmed. You can now sign in.</p>
                 <Button onClick={() => navigate('/login')}>Sign in now</Button>
               </div>
             ) : (

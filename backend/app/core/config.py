@@ -72,6 +72,10 @@ class Settings(BaseSettings):
             url = url.replace("ssl=true", "sslmode=require")
         return url
 
+    # D-24: mark new accounts verified at sign-up and send no mail. For demos and dev stacks only:
+    # anyone with an allowed-domain address can then register without proving they own it.
+    AUTO_VERIFY_EMAIL: bool = False
+
     # Mail / SMTP & HTTP Email APIs (D8: Resend/Brevo bypass Render free tier port 587 block)
     SMTP_HOST: str = "localhost"
     SMTP_PORT: int = 1025

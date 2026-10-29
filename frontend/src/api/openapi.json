@@ -2363,6 +2363,11 @@
           "message": {
             "title": "Message",
             "type": "string"
+          },
+          "verified": {
+            "default": false,
+            "title": "Verified",
+            "type": "boolean"
           }
         },
         "required": [

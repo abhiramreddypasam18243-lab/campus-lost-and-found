@@ -90,11 +90,27 @@ async def register(
         password_hash=pwd_hash,
         display_name=req.display_name,
         role="user",
-        email_verified_at=None,
+        email_verified_at=utc_now() if settings.AUTO_VERIFY_EMAIL else None,
         status="active",
     )
     db.add(new_user)
     await db.flush()
+
+    if settings.AUTO_VERIFY_EMAIL:
+        # D-24: no token, no mail; the audit entry records that nobody proved the address.
+        await write_audit_log(
+            db=db,
+            actor_id=new_user.id,
+            role="user",
+            action="user_registered",
+            entity_type="user",
+            entity_id=new_user.id,
+            summary={"email": email_clean, "auto_verified": True},
+        )
+        await db.commit()
+        return RegisterResponse(
+            message="Account created and verified.", email=email_clean, verified=True
+        )
 
     # Create verification token & 6-digit code (expires in 24 hours per AC-02)
     raw_token = generate_secure_token()

@@ -2039,6 +2039,11 @@ export interface components {
             email: string;
             /** Message */
             message: string;
+            /**
+             * Verified
+             * @default false
+             */
+            verified: boolean;
         };
         /** ReportDispositionRequest */
         ReportDispositionRequest: {

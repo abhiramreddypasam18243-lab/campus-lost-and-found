@@ -4,7 +4,7 @@ import { AuthProvider, isAdmin, isStaff, useAuth } from './auth'
 import { Link, navigate, useRoute, type Route } from './router'
 import { Alert, Button, EmptyState, Loading, ToastHost } from './ui'
 import { AccountPage, NotificationsPage, useUnreadCount } from './pages/Account'
-import { AdminPage, DashboardPage, type AdminTab } from './pages/Admin'
+import { AdminPage, DashboardPage, toAdminTab } from './pages/Admin'
 import { LoginPage, RegisterPage, VerifyPage } from './pages/Auth'
 import { BrowsePage, FoundDetailPage } from './pages/Browse'
 import { ClaimDetailPage, ClaimFormPage, MyClaimsPage } from './pages/Claims'
@@ -188,7 +188,7 @@ function Routes({ route }: { route: Route }) {
     case 'dashboard':
       return staffOnly(<DashboardPage />)
     case 'admin': {
-      const tab = (s1 as AdminTab) || 'users'
+      const tab = toAdminTab(s1)
       return adminOnly(<AdminPage tab={tab} onTab={(t) => navigate(`/admin/${t}`)} />)
     }
     default:

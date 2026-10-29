@@ -83,7 +83,7 @@ Build a secure, campus-aware lost-and-found platform with explainable multimodal
 | --- | --- | --- |
 | `user` | A verified campus account | Report items, browse found items, see matches for their own lost reports, claim found items, manage their own data |
 | `moderator` | Authorised campus staff | Everything a user can, plus review reports and images, decide claims, issue and verify handover codes, see private details and the dashboard |
-| `admin` | A small number of administrators | Everything a moderator can, plus manage locations, roles, jobs, the audit log and the evaluation page |
+| `admin` | A small number of administrators | Everything a moderator can, plus manage locations, roles, jobs and the audit log (evaluation results are read from `eval/results`, not an admin page; D-23) |
 
 | Capability | Anonymous | User | Moderator | Admin |
 | --- | --- | --- | --- | --- |
@@ -607,7 +607,7 @@ Clocks in tests are injected, so results are deterministic.
 - [ ] **AC-120** (7.3) Latency (p50 and p95) is reported per system at 1,000, 10,000 and 100,000 candidates, with approximate against exact search, and the hardware is recorded.
 - [ ] **AC-121** (7.7) Hypotheses are written before the test run (H1: the hybrid has a higher MRR than the best single-signal baseline); the outcome is reported whichever way it falls; the limits of synthetic text, location and time are stated; and a real-photo subset of at least 60 items is reported separately.
 - [ ] **AC-122** (P7) The evaluation data contains no faces or personal data and has EXIF removed; contributor consent and photo licences are recorded, and `eval/DATA_CARD.md` documents how it was built.
-- [ ] **AC-123** (FR-16) The admin evaluation page shows the latest saved results with their model versions and weights version, and never evaluates on live private data.
+- [ ] **AC-123** (FR-16) *(Superseded by D-23: no admin page; `GET /api/admin/evaluation` remains.)* The admin evaluation page shows the latest saved results with their model versions and weights version, and never evaluates on live private data.
 
 ### Interface and accessibility
 - [ ] **AC-124** (11) Every screen in section 11 has loading, empty and error states, and form errors are linked to their fields with `aria-describedby`.
@@ -738,6 +738,7 @@ The benchmark generator, the metrics and the statistics in step 12 depend only o
 | D-20 | 2026-10-21 | A signed-in user starting a claim sees the finder's verification questions through a claim-form endpoint; listings and detail views never include them | Keep prompts hidden (AC-75 cannot be satisfied); show prompts publicly | Resolves the P1 / AC-75 conflict: the answers are the secret, not the questions (pending owner confirmation) |
 | D-21 | 2026-10-21 | Credentials only over TLS or from this machine; forwarded headers trusted only from `TRUSTED_PROXIES`; published ports bound to 127.0.0.1; LAN uses HTTPS on 8443 | Trust any 172.* peer and all proxied requests in development | The old rule let LAN clients log in over plain HTTP and let containers forge forwarded headers (SEC7) |
 | D-22 | 2026-10-28 | "Where?" is free text with campus suggestions. Text that starts with a campus place links that place (`location_id`); the words are kept in `location_text`, which only the reporter and staff see and which is PII-scanned. A report with only typed text gets a `null` location score (6.3) and no building in public views | Fixed pickers only; geocoding or parsing free text into the tree | Owner request: people describe spots the tree does not have ("bench outside the canteen"). Matching keeps working whenever a place is linked, and P1 holds because the typed text is private |
+| D-23 | 2026-10-29 | The admin area has no Evaluation or Retention tab. `GET /api/admin/evaluation` and `POST /api/admin/retention/run` stay for scripts, and the worker still runs retention hourly | Keep both tabs | Owner request: the admin console is for running the service; offline research results and a manual retention button do not belong there |
 
 ## 21. Open Questions
 

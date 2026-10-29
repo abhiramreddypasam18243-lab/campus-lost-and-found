@@ -220,11 +220,7 @@ with sync_playwright() as p:
         page.goto(f"{BASE}/#/admin/locations")
         expect(page.get_by_role("heading", name="Campus tree")).to_be_visible()
         shot(page, "17-admin-locations")
-        page.goto(f"{BASE}/#/admin/evaluation")
-        expect(page.get_by_role("heading", name="Hypothesis H1")).to_be_visible(timeout=10000)
-        expect(page.get_by_text("C: image similarity:")).to_be_visible()
-        shot(page, "18-admin-evaluation")
-        axe(page, "evaluation")
+        axe(page, "admin locations")
 
         # 9. Phone width (AC-127)
         mobile = browser.new_context(viewport={"width": 360, "height": 740}, bypass_csp=True, is_mobile=True)

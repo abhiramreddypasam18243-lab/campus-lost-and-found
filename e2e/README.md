@@ -2,7 +2,7 @@
 
 | Script | Checks |
 | --- | --- |
-| `journey.py` | The blueprint demo (AC-146): found report → moderator approval → search → match suggestion → claim with the finder's question → approval → claimant's code → wrong code then right code at the desk → dashboard → admin evaluation page. Along the way: private details never in the public listing, the desk never shows the code, an axe scan of eight pages with no serious or critical violations (AC-126), and no horizontal scroll at 360 × 740 (AC-127). |
+| `journey.py` | The blueprint demo (AC-146): found report → moderator approval → search → match suggestion → claim with the finder's question → approval → claimant's code → wrong code then right code at the desk → dashboard → admin locations page. Along the way: private details never in the public listing, the desk never shows the code, an axe scan of eight pages with no serious or critical violations (AC-126), and no horizontal scroll at 360 × 740 (AC-127). |
 | `keyboard.py` | Reports a found item and submits a claim using only the keyboard, and fails if any element reached with Tab has no visible focus indicator (AC-125). |
 
 Run against a **freshly seeded** stack (the journey uses the seeded demo accounts and expects a

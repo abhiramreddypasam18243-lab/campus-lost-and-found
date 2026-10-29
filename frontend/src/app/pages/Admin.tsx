@@ -7,7 +7,6 @@ import {
   type AdminJob,
   type AdminUser,
   type Dashboard,
-  type Evaluation,
   type Location,
   type ModelEntry,
 } from '../api'
@@ -22,7 +21,6 @@ import {
   Card,
   ConfirmButton,
   EmptyState,
-  KeyValue,
   PageHeader,
   SelectField,
   StatusBadge,
@@ -81,7 +79,11 @@ export function DashboardPage() {
 
 /* ---------------- admin ---------------- */
 
-type AdminTab = 'users' | 'jobs' | 'models' | 'locations' | 'evaluation' | 'retention'
+const ADMIN_TABS = ['users', 'jobs', 'models', 'locations'] as const
+type AdminTab = (typeof ADMIN_TABS)[number]
+
+/** Old links such as #/admin/evaluation (removed, D-23) open Users. */
+export const toAdminTab = (s: string): AdminTab => (ADMIN_TABS as readonly string[]).includes(s) ? (s as AdminTab) : 'users'
 
 export function AdminPage({ tab, onTab }: { tab: AdminTab; onTab: (t: AdminTab) => void }) {
   return (
@@ -96,16 +98,12 @@ export function AdminPage({ tab, onTab }: { tab: AdminTab; onTab: (t: AdminTab) 
           { id: 'jobs', label: 'Jobs' },
           { id: 'models', label: 'Models' },
           { id: 'locations', label: 'Locations' },
-          { id: 'evaluation', label: 'Evaluation' },
-          { id: 'retention', label: 'Retention' },
         ]}
       />
       {tab === 'users' && <UsersTab />}
       {tab === 'jobs' && <JobsTab />}
       {tab === 'models' && <ModelsTab />}
       {tab === 'locations' && <LocationsTab />}
-      {tab === 'evaluation' && <EvaluationTab />}
-      {tab === 'retention' && <RetentionTab />}
     </>
   )
 }
@@ -546,231 +544,5 @@ function LocationsTab() {
         </form>
       </Card>
     </div>
-  )
-}
-
-/* ---------------- evaluation ---------------- */
-
-type Metrics = Record<string, number>
-type SystemResult = { name: string; description: string; metrics: Metrics; mrr_ci: [number, number]; n_queries: number }
-type NoiseResult = { metrics: Metrics; mrr_ci: [number, number] }
-
-const fmt = (x: unknown, d = 3) => (typeof x === 'number' ? x.toFixed(d) : '—')
-const ci = (c: unknown) => (Array.isArray(c) && c.length === 2 ? `[${fmt(c[0])}, ${fmt(c[1])}]` : '—')
-
-function MetricsTable({ rows, caption }: { rows: [string, SystemResult | NoiseResult][]; caption: string }) {
-  return (
-    <div className="table-wrap">
-      <table className="table table-num">
-        <caption className="table-caption">{caption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">System</th>
-            <th scope="col">MRR</th>
-            <th scope="col">95% CI</th>
-            <th scope="col">R@1</th>
-            <th scope="col">R@3</th>
-            <th scope="col">R@5</th>
-            <th scope="col">R@10</th>
-            <th scope="col">nDCG@10</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(([label, r]) => (
-            <tr key={label}>
-              <th scope="row">{label}</th>
-              <td>{fmt(r.metrics.mrr)}</td>
-              <td className="mono">{ci(r.mrr_ci)}</td>
-              <td>{fmt(r.metrics.recall_at_1)}</td>
-              <td>{fmt(r.metrics.recall_at_3)}</td>
-              <td>{fmt(r.metrics.recall_at_5)}</td>
-              <td>{fmt(r.metrics.recall_at_10)}</td>
-              <td>{fmt(r.metrics.ndcg_at_10)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function EvaluationTab() {
-  const state = useAsync(() => api.get<Evaluation>('/api/admin/evaluation'), [])
-  if (state.error instanceof ApiError && state.error.code === 'no_results') {
-    return (
-      <EmptyState icon="chart" title="No evaluation results yet">
-        Run the frozen evaluation offline: <code>python -m eval.runner final</code>. Results are never computed on live data.
-      </EmptyState>
-    )
-  }
-  return (
-    <AsyncView state={state} label="Loading results">
-      {(raw) => {
-        const r = raw as unknown as Record<string, unknown>
-        const systems = (r.systems ?? {}) as Record<string, SystemResult>
-        const h1 = (r.hypothesis_h1 ?? {}) as Record<string, unknown>
-        const ablations = (r.ablations ?? {}) as Record<string, Record<string, unknown>>
-        const latency = (r.latency_benchmark ?? {}) as Record<string, unknown>
-        const notEvaluated = (r.not_evaluated ?? []) as { system: string; reason: string }[]
-        const limitations = (r.limitations ?? []) as string[]
-        const models = (r.models ?? {}) as Record<string, unknown>
-        const weights = (r.weights ?? {}) as Record<string, unknown>
-        const noiseRows = (key: string) =>
-          Object.entries((ablations[key] ?? {}) as Record<string, NoiseResult>).filter(([, v]) => v && typeof v === 'object' && 'metrics' in v)
-        const sizes = (latency.sizes ?? {}) as Record<string, Record<string, { p50: number; p95: number } | number>>
-
-        return (
-          <div className="stack">
-            <Alert tone="warning" title="Synthetic benchmark">
-              These are findings on a seeded synthetic benchmark, not evidence of real-world recovery rates.
-            </Alert>
-            <Card>
-              <h2>Hypothesis H1</h2>
-              <p>{String(h1.statement ?? '')}</p>
-              <KeyValue
-                items={[
-                  ['Pre-registered in', String(h1.registered_in ?? '—')],
-                  ['Compared against', String(h1.best_baseline ?? '—')],
-                  ['MRR difference', fmt(h1.mean_mrr_difference, 4)],
-                  ['95% CI of difference', ci(h1.difference_95_ci)],
-                  [
-                    'Outcome',
-                    <Badge key="o" tone={h1.is_supported ? 'success' : 'danger'}>
-                      {h1.is_supported ? 'Supported (CI excludes 0)' : 'Not supported'}
-                    </Badge>,
-                  ],
-                ]}
-              />
-              {typeof h1.outcome === 'string' && <p className="muted">{h1.outcome}</p>}
-            </Card>
-            <Card>
-              <h2>Systems on the test split</h2>
-              <MetricsTable caption="Test-set retrieval quality (bootstrap 95% CI over queries)" rows={Object.values(systems).map((s) => [s.name, s])} />
-              {notEvaluated.length > 0 && (
-                <Alert tone="info" title="Not evaluated">
-                  <ul>
-                    {notEvaluated.map((n) => (
-                      <li key={n.system}>
-                        <strong>{n.system}:</strong> {n.reason}
-                      </li>
-                    ))}
-                  </ul>
-                </Alert>
-              )}
-            </Card>
-            <Card>
-              <h2>Ablations and robustness (hybrid)</h2>
-              <MetricsTable caption="Remove one signal" rows={noiseRows('signal_removal')} />
-              <MetricsTable caption="Location noise (found report one level off)" rows={noiseRows('location_noise')} />
-              <MetricsTable caption="Time noise (found time shifted 24 h)" rows={noiseRows('time_noise')} />
-              {typeof (ablations.missing_photos as Record<string, unknown> | undefined)?.reason === 'string' && (
-                <p className="muted small">Missing-photo sweep: {String((ablations.missing_photos as Record<string, unknown>).reason)}</p>
-              )}
-            </Card>
-            <Card>
-              <h2>Latency</h2>
-              {latency.status === 'measured' ? (
-                <div className="table-wrap">
-                  <table className="table table-num">
-                    <caption className="table-caption">Top-10 vector search in PostgreSQL + pgvector ({String(latency.dimension ?? '')}-d)</caption>
-                    <thead>
-                      <tr>
-                        <th scope="col">Candidates</th>
-                        <th scope="col">Exact p50 / p95 (ms)</th>
-                        <th scope="col">HNSW p50 / p95 (ms)</th>
-                        <th scope="col">HNSW recall@10</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(sizes).map(([n, v]) => {
-                        const ex = v.exact_ms as { p50: number; p95: number }
-                        const hn = v.hnsw_ms as { p50: number; p95: number }
-                        return (
-                          <tr key={n}>
-                            <th scope="row">{Number(n).toLocaleString()}</th>
-                            <td>
-                              {fmt(ex?.p50, 2)} / {fmt(ex?.p95, 2)}
-                            </td>
-                            <td>
-                              {fmt(hn?.p50, 2)} / {fmt(hn?.p95, 2)}
-                            </td>
-                            <td>{fmt(v.hnsw_recall_at_10, 3)}</td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="muted">{String(latency.reason ?? 'Not measured.')}</p>
-              )}
-            </Card>
-            <Card>
-              <h2>Run record</h2>
-              <KeyValue
-                items={[
-                  ['Run at', formatDateTime(String(r.timestamp ?? ''))],
-                  ['Text model', String(models.text_embedding ?? '—')],
-                  ['Weights', Object.entries(weights).map(([k, v]) => `${k} ${String(v)}`).join(' · ') || '—'],
-                  ['Seed', String(r.seed ?? '—')],
-                  ['Test-set hash', <span key="h" className="mono">{String(r.dataset_hash ?? '—').slice(0, 16)}…</span>],
-                  ['Frozen config hash', <span key="c" className="mono">{String(r.config_hash ?? '—').slice(0, 16)}…</span>],
-                  ['Git commit', <span key="g" className="mono">{String(r.git_commit ?? '—').slice(0, 10)}</span>],
-                ]}
-              />
-              {limitations.length > 0 && (
-                <>
-                  <h3>Limitations</h3>
-                  <ul>
-                    {limitations.map((l) => (
-                      <li key={l}>{l}</li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </Card>
-          </div>
-        )
-      }}
-    </AsyncView>
-  )
-}
-
-function RetentionTab() {
-  const [result, setResult] = useState<Record<string, number> | null>(null)
-  const [busy, setBusy] = useState(false)
-  return (
-    <Card>
-      <h2>Retention</h2>
-      <p className="muted">
-        The worker runs retention hourly: found items expire after 90 days unclaimed, and photos and claim evidence
-        are deleted 30 days after closure. You can also run it now.
-      </p>
-      <Button
-        variant="secondary"
-        busy={busy}
-        onClick={async () => {
-          setBusy(true)
-          try {
-            setResult(await api.post<Record<string, number>>('/api/admin/retention/run'))
-          } catch (err) {
-            toast(errorMessage(err), 'danger')
-          } finally {
-            setBusy(false)
-          }
-        }}
-      >
-        Run retention now
-      </Button>
-      {result && (
-        <KeyValue
-          items={[
-            ['Reports expired', result.expired_reports],
-            ['Images purged', result.purged_images],
-            ['Audit rows purged', result.purged_audit_logs],
-          ]}
-        />
-      )}
-    </Card>
   )
 }

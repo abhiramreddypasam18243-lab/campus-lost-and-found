@@ -28,7 +28,6 @@ export type Dashboard = Schemas['DashboardMetricsResponse']
 export type AdminUser = Schemas['AdminUserResponse']
 export type AdminJob = Schemas['AdminJobResponse']
 export type ModelEntry = Schemas['ModelRegistryResponse']
-export type Evaluation = Schemas['AdminEvaluationResponse']
 export type ImageInfo = Schemas['ImageResponse']
 export type TimePrecision = Schemas['CreateLostReportRequest']['time_precision']
 
